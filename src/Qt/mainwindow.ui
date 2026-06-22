@@ -21,12 +21,7 @@
                 <item>
                     <widget class="QPlainTextEdit" name="codeEditor">
                         <property name="plainText">
-                            <string>#include &lt;iostream&gt;
-
-                                int main() {
-                                int x = 10;
-                                return x + 5;
-                                }</string>
+                            <string>1 + 2 + 3 + 4 + 5;</string>
                         </property>
                     </widget>
                 </item>

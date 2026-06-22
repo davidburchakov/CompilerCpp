@@ -44,10 +44,10 @@ add_custom_command(
         -visitor
         -listener
         -o ${ANTLR_OUTPUT_DIR}
-        ${CMAKE_SOURCE_DIR}/Cpp.g4
+        ${CMAKE_SOURCE_DIR}/src/C++00/grammar/Cpp.g4
 
         DEPENDS
-        ${CMAKE_SOURCE_DIR}/Cpp.g4
+        ${CMAKE_SOURCE_DIR}/src/C++00/grammar/Cpp.g4
 )
 
 add_custom_target(
@@ -59,10 +59,10 @@ add_custom_target(
 # EXECUTABLE FIRST
 # ---------------------------
 add_executable(AntlrQtEditor
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
+        src/C++00/main.cpp
+        src/Qt/mainwindow.cpp
+        src/Qt/mainwindow.h
+        src/Qt/mainwindow.ui
         ${ANTLR_GENERATED_SRC}
 )
 
