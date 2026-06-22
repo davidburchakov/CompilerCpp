@@ -1,0 +1,17 @@
+# Prerequisites and local configurations
+.idea/
+cmake-build-debug/
+cmake-build-release/
+
+# Build artifacts and distribution directories
+dist/
+build/
+bin/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Optional: If antlr4/ and tools/ only hold auto-generated files from Cpp.g4
+# antlr4/
+# tools/

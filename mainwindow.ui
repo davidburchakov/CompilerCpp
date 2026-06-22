@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>MainWindow</class>
+    <widget class="QMainWindow" name="MainWindow">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>1000</width>
+                <height>650</height>
+            </rect>
+        </property>
+
+        <property name="windowTitle">
+            <string>ANTLR AST Viewer</string>
+        </property>
+
+        <widget class="QWidget" name="centralwidget">
+            <layout class="QHBoxLayout" name="horizontalLayout">
+
+                <item>
+                    <widget class="QPlainTextEdit" name="codeEditor">
+                        <property name="plainText">
+                            <string>#include &lt;iostream&gt;
+
+                                int main() {
+                                int x = 10;
+                                return x + 5;
+                                }</string>
+                        </property>
+                    </widget>
+                </item>
+
+                <item>
+                    <widget class="QTreeWidget" name="astTree">
+                        <property name="headerLabels">
+                            <stringlist>
+                                <string>AST</string>
+                            </stringlist>
+                        </property>
+                    </widget>
+                </item>
+
+            </layout>
+        </widget>
+
+    </widget>
+</ui>
