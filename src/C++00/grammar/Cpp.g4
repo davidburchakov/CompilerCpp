@@ -5,7 +5,7 @@ grammar Cpp;
  * ============================================================
  */
 
-/* All 84 C++ Keywords */
+/* 84+ C++ Keywords */
 ALIGNAS        : 'alignas';
 ALIGNOF        : 'alignof';
 ASM            : 'asm';
@@ -14,8 +14,6 @@ BREAK          : 'break';
 CASE           : 'case';
 CATCH          : 'catch';
 CLASS          : 'class';
-CONST          : 'const';
-CONSTEXPR      : 'constexpr';
 CONST_CAST     : 'const_cast';
 CONTINUE       : 'continue';
 DECLTYPE       : 'decltype';
@@ -25,15 +23,11 @@ DO             : 'do';
 DYNAMIC_CAST   : 'dynamic_cast';
 ELSE           : 'else';
 ENUM           : 'enum';
-EXPLICIT       : 'explicit';
 EXPORT         : 'export';
-EXTERN         : 'extern';
 FOR            : 'for';
 FRIEND         : 'friend';
 GOTO           : 'goto';
 IF             : 'if';
-INLINE         : 'inline';
-MUTABLE        : 'mutable';
 NAMESPACE      : 'namespace';
 NEW            : 'new';
 NOEXCEPT       : 'noexcept';
@@ -45,27 +39,39 @@ PUBLIC         : 'public';
 REGISTER       : 'register';
 REINTERPRET_CAST: 'reinterpret_cast';
 RETURN         : 'return';
-SIGNED         : 'signed';
 SIZEOF         : 'sizeof';
-STATIC         : 'static';
 STATIC_ASSERT  : 'static_assert';
 STATIC_CAST    : 'static_cast';
 STRUCT         : 'struct';
 SWITCH         : 'switch';
 TEMPLATE       : 'template';
 THIS           : 'this';
-THREAD_LOCAL   : 'thread_local';
 THROW          : 'throw';
 TRY            : 'try';
 TYPEDEF        : 'typedef';
 TYPEID         : 'typeid';
 TYPENAME       : 'typename';
 UNION          : 'union';
-UNSIGNED       : 'unsigned';
 USING          : 'using';
-VIRTUAL        : 'virtual';
-VOLATILE       : 'volatile';
 WHILE          : 'while';
+
+/* Type Modifiers */
+CONST          : 'const';
+CONSTEXPR      : 'constexpr';
+CONSTINIT      : 'constinit';
+CONSTEVAL      : 'consteval';
+VOLATILE       : 'volatile';
+SIGNED         : 'signed';
+UNSIGNED       : 'unsigned';
+MUTABLE        : 'mutable';
+STATIC         : 'static';
+EXTERN         : 'extern';
+THREAD_LOCAL   : 'thread_local';
+
+/* function behavior */
+VIRTUAL        : 'virtual';
+EXPLICIT       : 'explicit';
+INLINE         : 'inline';
 
 /* Primitive Types & Literals */
 TRUE           : 'true' | 'True' | 'yes';
@@ -74,19 +80,15 @@ BOOL           : 'bool' | 'boolean';
 VOID           : 'void';
 DOUBLE         : 'double';
 FLOAT          : 'float';
-INT            : 'int';
-LONG           : 'long';
-SHORT          : 'short';
-CHAR           : 'char';
 CHAR16_T       : 'char16_t';
 CHAR32_T       : 'char32_t';
 WCHAR_T        : 'wchar_t';
 
 INT128         : 'int128_t' | 'longlonglonglong' | 'llll' | 'OCTOWORD';
 INT64          : 'int64_t' | 'longlong' | 'll' | 'QWORD';
-INT32          : 'int32_t' | 'DWORD';
-INT16          : 'int16_t' | 'WORD';
-INT8           : 'int8_t' | 'BYTE';
+INT32          : 'int32_t' | 'int' | 'long' | 'DWORD';
+INT16          : 'int16_t' | 'short' |'WORD';
+INT8           : 'int8_t' | 'char' | 'BYTE';
 
 /* Text-Based Operators & Keyword Alternatives */
 AND            : '&&' | 'and';
@@ -170,9 +172,19 @@ statement
     ;
 
 // 3. Handles: "int x;" or "double y = 10.5;"
+// 1. Core Variable Declaration tracks: "const int* &x;" or "static int arr[10] = {0};"
 variableDeclaration
-    : primitiveType IDENTIFIER SEMICOLON                    #Declaration
-    | primitiveType IDENTIFIER EQUALS expression SEMICOLON  #Initialization
+    : declarationModifiers primitiveType declarator SEMICOLON                     #Declaration
+    | declarationModifiers primitiveType declarator EQUALS expression SEMICOLON   #Initialization
+    ;
+
+// 2. The Declarator captures the operators (*, &, &&, []) wrapping the variable name
+declarator
+    : ASTERISK declarator        #PointerModifier   // Pointer modification nest
+    | BITAND declarator          #LvalueRefModifier // lvalue reference (&)
+    | AND declarator             #RvalueRefModifier // rvalue reference (&&)
+    | declarator LBRACK RBRACK   #ArrayModifier     // Matches multi-dimensional arrays []
+    | IDENTIFIER                 #BaseIdentifier    // Core variable name anchor boundary
     ;
 
 // 4. Groups all your type lexer tokens into one parser concept
@@ -180,6 +192,26 @@ primitiveType
     : BOOL | VOID | DOUBLE | FLOAT | INT | LONG | SHORT | CHAR
 
     | CHAR16_T | CHAR32_T | WCHAR_T | INT128 | INT64 | INT32 | INT16 | INT8
+    ;
+
+// Matches any sequence of modifiers preceding a type definition
+declarationModifiers
+    : (typeModifier | storageSpecifier | functionSpecifier)*
+    ;
+
+// Modifiers that fundamentally alter the data storage layout itself
+typeModifier
+    : CONST | VOLATILE | SIGNED | UNSIGNED | SHORT | LONG
+    ;
+
+// Modifiers controlling lifetime scope and thread boundaries
+storageSpecifier
+    : STATIC | EXTERN | THREAD_LOCAL | MUTABLE
+    ;
+
+// Modifiers checking execution rules and optimization limits
+functionSpecifier
+    : INLINE | VIRTUAL | EXPLICIT | CONSTEXPR | CONSTEVAL | CONSTINIT
     ;
 
 expression
