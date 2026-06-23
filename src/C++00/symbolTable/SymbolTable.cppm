@@ -4,6 +4,7 @@ module;
 #include <string>
 #include <unordered_map>
 #include <iostream>
+#include <array>
 
 // 2. Begin C++23 Module Declaration context
 export module SymbolTableModule;
@@ -19,11 +20,47 @@ namespace CppZero {
         Mutable
     };
 
+    export struct TypeAliasGroup {
+        std::string_view canonicalType;
+        std::array<std::string_view, 8> aliases; // Max room for 8 strings per group
+        size_t aliasCount;
+    };
+
+    export inline constexpr std::array<TypeAliasGroup, 12> primitiveTypes {{
+        { "int32_t",   { "int32_t", "int", "long", "DWORD" }, 4 },
+        { "int128_t",  { "int128_t", "longlonglonglong", "llll", "OCTOWORD" }, 4 },
+        { "int64_t",   { "int64_t", "longlong", "ll", "QWORD" }, 4 },
+        { "int16_t",   { "int16_t", "short", "WORD" }, 3 },
+        { "int8_t",    { "int8_t", "char", "BYTE" }, 3 },
+        { "bool",      { "bool", "boolean", "true", "True", "yes", "false", "False", "no" }, 8 },
+        { "void",      { "void" }, 1 },
+        { "double",    { "double" }, 1 },
+        { "float",     { "float" }, 1 },
+        { "char16_t",  { "char16_t" }, 1 },
+        { "char32_t",  { "char32_t" }, 1 },
+        { "wchar_t",   { "wchar_t" }, 1 }
+    }};
+
+    export constexpr std::string_view normalizeType(std::string_view rawType) {
+        for (const auto& group : primitiveTypes) {
+            for (size_t i = 0; i < group.aliasCount; ++i) {
+                if (group.aliases[i] == rawType) {
+                    return group.canonicalType; // Match found! Return the standard name
+                }
+            }
+        }
+
+        // No match found anywhere in the compile-time array mapping tiers.
+        // We throw an exception directly. (C++20/C++23 fully supports throwing exceptions in constexpr blocks!)
+        throw std::runtime_error("Compile-Time Semantic Error: Invalid or unrecognized primitive type identifier '" +
+                                 std::string(rawType) + "'");
+    }
+
     // Tracks the structural signature of the data format
     export struct Type {
-        std::string baseType;       // e.g., "int", "double", "MyClass"
-        int pointerCount = 0;       // 0 = raw, 1 = ptr*, 2 = ptr**
-        int arrayDimensions = 0;    // 0 = single element, 1 = arr[], 2 = matrix[][]
+        std::string baseType;           // e.g., "int", "double", "MyClass"
+        int pointerCount = 0;           // 0 = raw, 1 = ptr*, 2 = ptr**
+        int arrayDimensions = 0;        // 0 = single element, 1 = arr[], 2 = matrix[][]
         bool isLvalueReference = false; // true = standard reference (&)
         bool isRvalueReference = false; // true = move reference (&&)
         bool isConst = false;           // true = constant modifier

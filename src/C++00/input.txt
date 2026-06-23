@@ -1,4 +1,4 @@
-long x;
+WORD x;
 int32_t y = 1;
-const char charArray[];
+const BYTE charArray[];
 x + y;

@@ -62,7 +62,6 @@ namespace CppZero {
         }
 
         // Helper to loop through the parsed prefix modifier sequence
-        // Helper to loop through the parsed prefix modifier sequence
         void extractModifiers(CppParser::DeclarationModifiersContext* ctx, Type& outType) {
             // 1. Check if the context block itself is null or has no elements using .empty()
             if (!ctx || ctx->typeModifier().empty()) {
@@ -92,9 +91,9 @@ namespace CppZero {
         explicit SymbolTableVisitor(SymbolTable& table) : symbolTable(table) {}
 
         // Handle raw declarations: "const int *x;"
-        virtual std::any visitDeclaration(CppParser::DeclarationContext *ctx) override {
+        std::any visitDeclaration(CppParser::DeclarationContext *ctx) override {
             Symbol symbol;
-            symbol.type.baseType = ctx->primitiveType()->getText();
+            symbol.type.baseType = CppZero::normalizeType(ctx->primitiveType()->getText());
 
             extractModifiers(ctx->declarationModifiers(), symbol.type);
             unwindDeclarator(ctx->declarator(), symbol);
@@ -104,7 +103,7 @@ namespace CppZero {
         }
 
         // Handle initialized declarations: "static double arr[][] = expression;"
-        virtual std::any visitInitialization(CppParser::InitializationContext *ctx) override {
+        std::any visitInitialization(CppParser::InitializationContext *ctx) override {
             Symbol symbol;
             symbol.type.baseType = ctx->primitiveType()->getText();
 
