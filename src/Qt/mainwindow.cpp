@@ -21,12 +21,13 @@
 
 using namespace antlr4;
 
+// ✅ FIXED SIGNATURE: Changed back to match mainwindow.h exactly
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
-    // Load your input source file text directly into the editor view on boot
+    // Load initial source data stream file text directly on boot
     QFile file("/home/incidence/Desktop/CompilerCpp/src/C++00/input.txt");
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&file);
@@ -39,7 +40,6 @@ MainWindow::MainWindow(QWidget *parent)
             this,
             &MainWindow::onTextChanged);
 
-    // Initial tree build using your file data layout mapping
     buildAST(ui->codeEditor->toPlainText().toStdString());
 }
 
@@ -50,6 +50,11 @@ MainWindow::~MainWindow() {
 void MainWindow::onTextChanged()
 {
     buildAST(ui->codeEditor->toPlainText().toStdString());
+}
+
+// ✅ This function safely populates the assembly window panel text
+void MainWindow::setAssemblyText(const std::string &assemblyCode) {
+    ui->assemblyViewer->setPlainText(QString::fromStdString(assemblyCode));
 }
 
 void MainWindow::buildAST(const std::string &code) const
@@ -64,17 +69,14 @@ void MainWindow::buildAST(const std::string &code) const
 
     tree::ParseTree *tree = parser.translationUnit();
 
-    // Recursive lambda designed to mirror your favorite vertical cascade indentation format
     std::function<void(tree::ParseTree*, QTreeWidgetItem*)> visit;
     visit = [&](tree::ParseTree *node, QTreeWidgetItem *parent)
     {
         if (!node) return;
 
-        // Case A: Node is a Structural Rule Context
         if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext*>(node)) {
             std::string ruleName = parser.getRuleNames()[ruleContext->getRuleIndex()];
 
-            // Eliminate structural rule nodes that didn't consume any code tokens
             if (ruleName == "declarationModifiers" && node->children.empty()) {
                 return;
             }
@@ -89,11 +91,9 @@ void MainWindow::buildAST(const std::string &code) const
                 visit(node->children[i], item);
             }
         }
-        // Case B: Node is a physical token leaf terminal string
         else if (auto *terminalNode = dynamic_cast<tree::TerminalNode*>(node)) {
             std::string tokenText = terminalNode->getText();
 
-            // Ignore empty whitespace tokens that leak through parser channels
             if (tokenText.find_first_not_of(" \t\r\n") == std::string::npos) {
                 return;
             }

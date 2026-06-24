@@ -12,8 +12,12 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
+    // ✅ Keep this signature exactly as it was originally
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
+
+    // ✅ Add this separate method to receive the assembly text safely
+    void setAssemblyText(const std::string &assemblyCode);
 
 private slots:
     void onTextChanged();

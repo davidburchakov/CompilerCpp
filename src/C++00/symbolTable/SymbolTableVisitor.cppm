@@ -21,7 +21,7 @@ namespace CppZero {
     export class SymbolTableVisitor : public CppBaseVisitor {
     private:
         SymbolTable &symbolTable;
-        Reports &reports;
+        Reports<Report> &reports;
         // Recursive helper to unwrap the nested declarator rule variants (*, &, &&, [])
         void unwindDeclarator(CppParser::DeclaratorContext *ctx, Symbol &outSymbol) {
             if (!ctx) return;
@@ -89,7 +89,7 @@ namespace CppZero {
 
 
     public:
-        explicit SymbolTableVisitor(SymbolTable& table, Reports &reports)
+        explicit SymbolTableVisitor(SymbolTable& table, Reports<Report> &reports)
             : symbolTable(table), reports(reports) {}
 
         // Handle raw declarations: "const int *x;"
@@ -104,7 +104,7 @@ namespace CppZero {
 
             if(!symbolTable.insert(symbol.name, symbol)) {
                 reports.errors.emplace_back("Duplicate declaration of variable " + symbol.name +
-                    "at line: " + std::to_string(symbol.declarationLine) + ", during " + symbol.treeNodeName, ErrorCodeEnum::FAILURE);
+                    " at line: " + std::to_string(symbol.declarationLine) + ", during " + symbol.treeNodeName, ErrorCodeEnum::FAILURE);
             }
 
             return visitChildren(ctx);
@@ -121,7 +121,7 @@ namespace CppZero {
 
             if(!symbolTable.insert(symbol.name, symbol)) {
                 reports.errors.emplace_back("Duplicate declaration of variable " + symbol.name +
-                    "at line: " + std::to_string(symbol.declarationLine) + ", during " + symbol.treeNodeName, ErrorCodeEnum::FAILURE);
+                    " at line: " + std::to_string(symbol.declarationLine) + ", during " + symbol.treeNodeName, ErrorCodeEnum::FAILURE);
             }
             return visitChildren(ctx);
         }
