@@ -226,13 +226,13 @@ void MainWindow::buildAST(const std::string &code) const
         astScene->addItem(circle);
 
         QString nodeText;
-        QColor nodeBgColor = Qt::white;
-        QColor nodeTextColor = Qt::black;
+        QColor nodeBgColor = Qt::black;
+        QColor nodeTextColor = Qt::white;
 
         if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext*>(node)) {
             nodeText = QString::fromStdString(parser.getRuleNames()[ruleContext->getRuleIndex()]);
             nodeBgColor = QColor(230, 242, 255);
-            nodeTextColor = QColor(0, 51, 153);
+            nodeTextColor = QColor(39, 111, 143);//QColor(1, 51, 153);
         }
         else if (auto *terminalNode = dynamic_cast<tree::TerminalNode*>(node)) {
             nodeText = QString::fromStdString(terminalNode->getText());
