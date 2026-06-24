@@ -1,15 +1,13 @@
 //
-// Created by incidence on 6/23/26.
+// Created by David Burchakov on 6/23/26.
 //
 module;
 
-// 1. Global Module Fragment: Traditional headers MUST go up here
 #include <iostream>
 #include <string>
 #include <vector>
 #include "antlr4-runtime.h"
 
-// 2. Core Module Identification Section
 export module Logger;
 
 namespace CppZero::Logger {

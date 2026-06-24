@@ -71,6 +71,7 @@ namespace CppZero {
     // Tracks the concrete variable instance identity
     export struct Symbol {
         std::string name;          // Variable name identifier (e.g., "matrix")
+        std::string treeNodeName;  // Tree node (e.g., "variableDeclaration")
         Type type;                 // Composition mapping block
         int declarationLine = 0;   // Line mapping location context for compiler debugging
     };
@@ -81,13 +82,16 @@ namespace CppZero {
         std::unordered_map<std::string, Symbol> table;
 
     public:
-        void insert(const std::string& name, const Symbol& symbol) {
+        bool insert(const std::string& name, const Symbol& symbol, const bool log = false) {
             if (table.contains(name)) {
-                std::cerr << "Semantic Error: Redefinition of variable '" << name
-                          << "' on line " << symbol.declarationLine << "\n";
-                return;
+                if (log) {
+                    std::cerr << "Semantic Error (Symbol Table insert()): Redefinition of variable '" << name
+                              << "' on line " << symbol.declarationLine << "\n";
+                }
+                return false;
             }
             table[name] = symbol;
+            return true;
         }
 
         bool exists(const std::string& name) const {

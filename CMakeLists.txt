@@ -79,7 +79,11 @@ target_sources(AntlrQtEditor
         FILES
         src/C++00/symbolTable/SymbolTable.cppm
         src/C++00/symbolTable/SymbolTableVisitor.cppm
-        src/C++00/auxiliary/Logger.cppm            # Registered cleanly here
+        src/C++00/auxiliary/Logger.cppm
+        src/C++00/semantics/SemanticAnalysis.cppm
+        src/C++00/semantics/SemanticVisitor.cppm
+        src/C++00/auxiliary/Reports.cppm
+        src/C++00/auxiliary/LogColor.cppm
 )
 
 add_dependencies(AntlrQtEditor GenerateGrammar)

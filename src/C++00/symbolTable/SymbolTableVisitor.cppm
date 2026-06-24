@@ -13,16 +13,17 @@ module;
 
 export module SymbolTableVisitorModule;
 
-import SymbolTableModule; // Import your Symbol structure module
+import SymbolTableModule;
+import Reports;
 
 namespace CppZero {
 
     export class SymbolTableVisitor : public CppBaseVisitor {
     private:
-        SymbolTable& symbolTable;
-
+        SymbolTable &symbolTable;
+        Reports &reports;
         // Recursive helper to unwrap the nested declarator rule variants (*, &, &&, [])
-        void unwindDeclarator(CppParser::DeclaratorContext* ctx, Symbol& outSymbol) {
+        void unwindDeclarator(CppParser::DeclaratorContext *ctx, Symbol &outSymbol) {
             if (!ctx) return;
 
             // 1. Base Case: Reached the core variable name
@@ -88,17 +89,24 @@ namespace CppZero {
 
 
     public:
-        explicit SymbolTableVisitor(SymbolTable& table) : symbolTable(table) {}
+        explicit SymbolTableVisitor(SymbolTable& table, Reports &reports)
+            : symbolTable(table), reports(reports) {}
 
         // Handle raw declarations: "const int *x;"
         std::any visitDeclaration(CppParser::DeclarationContext *ctx) override {
+
             Symbol symbol;
             symbol.type.baseType = CppZero::normalizeType(ctx->primitiveType()->getText());
 
             extractModifiers(ctx->declarationModifiers(), symbol.type);
             unwindDeclarator(ctx->declarator(), symbol);
+            symbol.treeNodeName = "variableDeclaration";
 
-            symbolTable.insert(symbol.name, symbol);
+            if(!symbolTable.insert(symbol.name, symbol)) {
+                reports.errors.emplace_back("Duplicate declaration of variable " + symbol.name +
+                    "at line: " + std::to_string(symbol.declarationLine) + ", during " + symbol.treeNodeName, ErrorCodeEnum::FAILURE);
+            }
+
             return visitChildren(ctx);
         }
 
@@ -109,8 +117,12 @@ namespace CppZero {
 
             extractModifiers(ctx->declarationModifiers(), symbol.type);
             unwindDeclarator(ctx->declarator(), symbol);
+            symbol.treeNodeName = "variableInitialization";
 
-            symbolTable.insert(symbol.name, symbol);
+            if(!symbolTable.insert(symbol.name, symbol)) {
+                reports.errors.emplace_back("Duplicate declaration of variable " + symbol.name +
+                    "at line: " + std::to_string(symbol.declarationLine) + ", during " + symbol.treeNodeName, ErrorCodeEnum::FAILURE);
+            }
             return visitChildren(ctx);
         }
     };

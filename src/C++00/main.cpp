@@ -24,6 +24,7 @@
 import SymbolTableModule;
 import SymbolTableVisitorModule;
 import Logger;
+import Reports;
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -56,10 +57,14 @@ int main(int argc, char *argv[]) {
 
     // Instantiate Table and Visitor data containers
     CppZero::SymbolTable symbolTable;
-    CppZero::SymbolTableVisitor visitor(symbolTable);
+    CppZero::Reports reports;
+    CppZero::SymbolTableVisitor visitor(symbolTable, reports);
 
     // Run the traversal pass to capture symbols
     visitor.visit(tree);
+    for (const CppZero::Report &error: reports.errors) {
+        std::cout << error.reportMsg << ' ';
+    }
 
     symbolTable.printAll();
 
