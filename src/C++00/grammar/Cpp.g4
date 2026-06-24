@@ -108,7 +108,7 @@ STRING_LITERAL : '"' (~["\\\r\n] | '\\' .)* '"' ;
 CHAR_LITERAL   : '\'' (~['\\\r\n] | '\\' .) '\'' ;
 
 /* Numeric Literals */
-FLOAT_LITERAL  : [0-9]* '.' [0-9]+ | [0-9]+ '.' [0-9]* ;
+DOUBLE_LITERAL  : [0-9]* '.' [0-9]+ | [0-9]+ '.' [0-9]* ;
 INT_LITERAL    : [1-9][0-9]* | '0' ;
 
 /* Catch-All for Custom Identifiers (Variables, Functions, Classes) */
@@ -163,6 +163,7 @@ WHITESPACE     : [ \t\r\n]+ -> skip ;
 // 1. Entry Point: A program is a sequence of statements
 translationUnit
     : (statement)* EOF
+    | RETURN expression
     ;
 
 // 2. A statement can be a declaration OR a standard expression
@@ -217,7 +218,7 @@ expression
     /* 1. Primary Expressions & Literals (Highest Precedence) */
     :   LPAREN expression RPAREN                     #ParentExpression
     |   INT_LITERAL                                  #IntLiteral
-    |   FLOAT_LITERAL                                #FloatLiteral
+    |   DOUBLE_LITERAL                               #DoubleLiteral
     |   STRING_LITERAL                               #StringLiteral
     |   CHAR_LITERAL                                 #CharLiteral
     |   TRUE                                         #LiteralTrue

@@ -79,28 +79,28 @@ namespace CppZero {
     // Container matching scope mappings
     export class SymbolTable {
     private:
-        std::unordered_map<std::string, Symbol> table;
+        std::unordered_map<std::string, Symbol> variables;
 
     public:
         bool insert(const std::string& name, const Symbol& symbol, const bool log = false) {
-            if (table.contains(name)) {
+            if (variables.contains(name)) {
                 if (log) {
                     std::cerr << "Semantic Error (Symbol Table insert()): Redefinition of variable '" << name
                               << "' on line " << symbol.declarationLine << "\n";
                 }
                 return false;
             }
-            table[name] = symbol;
+            variables[name] = symbol;
             return true;
         }
 
         bool exists(const std::string& name) const {
-            return table.contains(name);
+            return variables.contains(name);
         }
 
         Symbol get(const std::string& name) const {
-            if (table.contains(name)) {
-                return table.at(name);
+            if (variables.contains(name)) {
+                return variables.at(name);
             }
             return Symbol{};
         }
@@ -111,13 +111,13 @@ namespace CppZero {
             std::cout << "\n  SYMBOL TABLE CONTENTS (CppZero)";
             std::cout << "\n========================================\n";
 
-            if (table.empty()) {
+            if (variables.empty()) {
                 std::cout << " (No variables declared)\n";
                 std::cout << "========================================\n";
                 return;
             }
 
-            for (const auto& [name, symbol] : table) {
+            for (const auto& [name, symbol] : variables) {
                 std::cout << "• Variable: " << name << "\n";
                 std::cout << "  - Line:       " << symbol.declarationLine << "\n";
 

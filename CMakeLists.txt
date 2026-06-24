@@ -84,6 +84,8 @@ target_sources(AntlrQtEditor
         src/C++00/semantics/SemanticVisitor.cppm
         src/C++00/auxiliary/Reports.cppm
         src/C++00/auxiliary/LogColor.cppm
+        src/C++00/optimizations/ASTOptimizer.cppm
+        src/C++00/assembly/AssemblyGenerator.cppm
 )
 
 add_dependencies(AntlrQtEditor GenerateGrammar)

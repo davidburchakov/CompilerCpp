@@ -1,6 +1,1 @@
-WORD x;
-int32_t y = 1;
-int y = 2;
-int y;
-const BYTE charArray[];
-x + y;
+return 1 + 2 + 3 + 4 + 5;

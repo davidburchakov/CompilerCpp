@@ -6,18 +6,17 @@
             <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>1000</width>
+                <width>1200</width> <!-- Increased window size for three columns -->
                 <height>650</height>
             </rect>
         </property>
-
         <property name="windowTitle">
-            <string>ANTLR AST Viewer</string>
+            <string>ANTLR AST &amp; Assembly Viewer</string>
         </property>
-
         <widget class="QWidget" name="centralwidget">
             <layout class="QHBoxLayout" name="horizontalLayout">
 
+                <!-- Left Column: Source Editor -->
                 <item>
                     <widget class="QPlainTextEdit" name="codeEditor">
                         <property name="plainText">
@@ -26,18 +25,30 @@
                     </widget>
                 </item>
 
+                <!-- Middle Column: AST Viewer -->
                 <item>
                     <widget class="QTreeWidget" name="astTree">
                         <property name="headerLabels">
                             <stringlist>
-                                <string>AST</string>
+                                <string>AST Structure</string>
                             </stringlist>
+                        </property>
+                    </widget>
+                </item>
+
+                <!-- Right Column: New Assembly Output Viewer -->
+                <item>
+                    <widget class="QPlainTextEdit" name="assemblyViewer">
+                        <property name="readOnly">
+                            <bool>true</bool> <!-- Prevent the user from typing over generated code -->
+                        </property>
+                        <property name="placeholderText">
+                            <string>Target assembly code appears here...</string>
                         </property>
                     </widget>
                 </item>
 
             </layout>
         </widget>
-
     </widget>
 </ui>

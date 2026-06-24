@@ -44,15 +44,19 @@ export namespace CppZero {
     };
 
 
-
+template <typename R>
     class Reports {
     public:
-        std::vector<Report> errors;
-        std::vector<Report> warnings;
-        std::vector<Report> suggestions;
-        Reports(const std::vector<Report> &errors, const std::vector<Report> &warnings, const std::vector<Report> &suggestions)
+        std::vector<R> errors;
+        std::vector<R> warnings;
+        std::vector<R> suggestions;
+        Reports(const std::vector<R> &errors, const std::vector<R> &warnings, const std::vector<R> &suggestions)
             :errors(errors), warnings(warnings), suggestions(suggestions) { }
         Reports() = default;
+
+        bool noErrors() const { return errors.empty(); }
+        bool noWarnings() const { return warnings.empty(); }
+        bool noSuggestions() const { return suggestions.empty(); }
     };
 };
 
