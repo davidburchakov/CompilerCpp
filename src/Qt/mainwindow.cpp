@@ -133,7 +133,8 @@ void MainWindow::onTextChanged()
 
     if (code.empty()) {
         astScene->clear();
-        ui->assemblyViewer->clear();
+        ui->optimizedAssemblyViewer->clear();
+        ui->plainAssemblyViewer->clear();
         return;
     }
 
@@ -145,23 +146,53 @@ void MainWindow::onTextChanged()
     tree::ParseTree *tree = parser.translationUnit();
 
     if (parser.getNumberOfSyntaxErrors() > 0) {
-        ui->assemblyViewer->setPlainText("# Syntax Error: Fix input code to generate assembly...");
+        ui->optimizedAssemblyViewer->setPlainText("# Syntax Error: Fix input code to generate assembly...");
+        ui->plainAssemblyViewer->setPlainText("# Syntax Error");
         buildAST(code);
         return;
     }
 
+    // ============================
+    // 1. UNOPTIMIZED ASSEMBLY
+    // ============================
+    CppZero::AssemblyGenerator rawGenerator;
+    std::string unoptimizedAssembly = rawGenerator.generateAssembly(tree);
+
+    // ============================
+    // 2. OPTIMIZER + OPTIMIZED ASM
+    // ============================
     CppZero::ASTOptimizer optimizer;
     std::any optimizationResult = optimizer.optimize(tree);
 
-    CppZero::AssemblyGenerator generator(optimizationResult);
-    std::string dynamicAssembly = generator.generateAssembly(tree);
+    CppZero::AssemblyGenerator optimizedGenerator(optimizationResult);
+    std::string optimizedAssembly = optimizedGenerator.generateAssembly(tree);
 
-    ui->assemblyViewer->setPlainText(QString::fromStdString(dynamicAssembly));
+    // ============================
+    // 3. UI OUTPUT
+    // ============================
+    ui->plainAssemblyViewer->setPlainText(
+        QString::fromStdString(unoptimizedAssembly)
+    );
+
+    ui->optimizedAssemblyViewer->setPlainText(
+        QString::fromStdString(optimizedAssembly)
+    );
+
+    // ============================
+    // 4. AST VISUALIZATION
+    // ============================
     buildAST(code);
 }
 
-void MainWindow::setAssemblyText(const std::string &assemblyCode) {
-    ui->assemblyViewer->setPlainText(QString::fromStdString(assemblyCode));
+void MainWindow::setOptimizedAssemblyText(const std::string &assemblyCode) {
+    ui->optimizedAssemblyViewer->setPlainText(QString::fromStdString(assemblyCode));
+}
+
+void MainWindow::setPlainAssemblyText(const std::string &assemblyCode)
+{
+    ui->plainAssemblyViewer->setPlainText(
+        QString::fromStdString(assemblyCode)
+    );
 }
 
 // ============================================================================

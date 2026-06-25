@@ -21,6 +21,8 @@ export namespace CppZero {
         explicit AssemblyGenerator(std::any optimizedData)
             : optimizedTreeResults(std::move(optimizedData)) {}
 
+        AssemblyGenerator() = default;
+
         std::string generateAssembly(antlr4::tree::ParseTree* tree) {
             asmOutput.clear();
 

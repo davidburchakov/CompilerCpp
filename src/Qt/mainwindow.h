@@ -17,8 +17,8 @@ public:
 
     ~MainWindow();
 
-    void setAssemblyText(const std::string &assemblyCode);
-
+    void setOptimizedAssemblyText(const std::string &assemblyCode);
+    void setPlainAssemblyText(const std::string &assemblyCode);
 protected:
     // Intercepts middle mouse clicks and scroll events on the canvas
 

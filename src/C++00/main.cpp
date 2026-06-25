@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 
     // Launch GUI View and pass the finalAssembly variable block inside
     MainWindow window;
-    window.setAssemblyText(finalAssembly);
+    window.setOptimizedAssemblyText(finalAssembly);
     window.show();
 
     delete tree;
