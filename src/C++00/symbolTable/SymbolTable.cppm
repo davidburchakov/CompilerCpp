@@ -20,8 +20,8 @@ namespace CppZero {
     };
 
     export struct TypeAliasGroup {
-        std::string_view canonical_type;          // base type, or, hypernym
-        std::array<std::string_view, 8> aliases;  // 8 aliases at most declared in lexer rules
+        std::string_view canonical_type;         // base type, or, hypernym
+        std::array<std::string_view, 8> aliases; // 8 aliases at most declared in lexer rules
         size_t alias_count;
     };
 
@@ -56,11 +56,10 @@ namespace CppZero {
             }
         }
 
-        // C++23 supports throwing exceptions in compile-time evaluation failures
+        // C++23 supports throwing exceptions in compile-time evaluation failures. Should actually never throw
         throw std::runtime_error(
-            "Compile-Time Semantic Error: Invalid or unrecognized primitive type "
-            "identifier '" +
-            std::string(raw_type) + "'");
+            "Compile-Time Semantic Error: Invalid or unrecognized primitive type identifier '" +
+                std::string(raw_type) + "'");
     }
 
     export struct Type {
@@ -74,12 +73,11 @@ namespace CppZero {
         StorageClass storage = StorageClass::kAuto;
     };
 
-    // Tracks the concrete variable instance identity
     export struct Symbol {
-        std::string name; // Identifier
-        std::string tree_node_name; // Abstract Syntax Tree Node
-        Type type; // info, e.g., is_const, storage type
-        int declaration_line = 0; // respective line
+        std::string name;            // Identifier
+        std::string tree_node_name;  // Abstract Syntax Tree Node
+        Type type;                   // info, e.g., is_const, storage type
+        int declaration_line = 0;    // respective line
     };
 
     export class SymbolTable {
@@ -160,4 +158,5 @@ namespace CppZero {
     private:
         absl::flat_hash_map<std::string, Symbol> symbol_table_;
     };
+
 } // namespace CppZero
