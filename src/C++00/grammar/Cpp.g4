@@ -168,18 +168,23 @@ translationUnit
 
 // 2. A statement can be a declaration OR a standard expression
 statement
-    : variableDeclaration    #VarDeclStatement
-    | expression SEMICOLON   #ExprStatement
+    : variableDeclaration     #VariableDeclarationStatement
+    | expression SEMICOLON    #ExpressionStatement
     ;
 
-// 3. Handles: "int x;" or "double y = 10.5;"
-// 1. Core Variable Declaration tracks: "const int* &x;" or "static int arr[10] = {0};"
 variableDeclaration
-    : declarationModifiers primitiveType declarator SEMICOLON                     #Declaration
-    | declarationModifiers primitiveType declarator EQUALS expression SEMICOLON   #Initialization
+    : declarationModifiers primitiveType declaratorList SEMICOLON #VariableDeclarationClause
     ;
 
-// 2. The Declarator captures the operators (*, &, &&, []) wrapping the variable name
+declaratorList
+    : initializedDeclarator (COMMA initializedDeclarator)*
+    ;
+
+initializedDeclarator
+    : declarator (EQUALS expression)?
+    ;
+
+// The Declarator captures the operators (*, &, &&, []) wrapping the variable name
 declarator
     : ASTERISK declarator        #PointerModifier   // Pointer modification nest
     | BITAND declarator          #LvalueRefModifier // lvalue reference (&)
