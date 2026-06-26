@@ -63,13 +63,14 @@ namespace CppZero {
     }
 
     export struct Type {
-        std::string base_type; // e.g., "int", "double", "MyClass"
-        int pointer_count = 0;
-        int array_dimensions = 0;
-        bool is_lvalue_reference = false;
-        bool is_rvalue_reference = false;
-        bool is_const = false;
-        bool is_volatile = false;
+        std::string base_type;             // e.g., "int", "double", "MyClass"
+        int pointer_count = 0;             // 0 = raw, 1 = ptr*, 2 = ptr**
+        int array_dimensions = 0;          // 0 = single element, 1 = arr[], 2 = matrix[][]
+        bool is_lvalue_reference = false;  // true = standard reference (&)
+        bool is_rvalue_reference = false;  // true = move reference (&&)
+        bool is_const = false;             // true = constant modifier
+        bool is_volatile = false;          // true = volatile modifier
+        bool is_signed = true;             // default = true
         StorageClass storage = StorageClass::kAuto;
     };
 

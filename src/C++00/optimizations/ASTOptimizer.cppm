@@ -24,9 +24,9 @@ export namespace CppZero {
         }
 
 
-        virtual std::any visitVarDeclStatement(CppParser::VarDeclStatementContext *ctx) override {
-            return visitChildren(ctx);
-        }
+        // virtual std::any visitVarDeclStatement(CppParser::VarDeclStatementContext *ctx) override {
+        //     return visitChildren(ctx);
+        // }
 
 private:
     // Recursively flattens left-leaning addition trees into a vector of numbers

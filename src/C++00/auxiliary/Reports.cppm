@@ -11,52 +11,64 @@ import LogColor;
 
 export namespace CppZero {
     enum class ErrorCodeEnum {
-        SUCCESS,
-        FAILURE,
-        WARNING,
-        SUGGESTION,
+        kSuccess,
+        kFailure,
+        kWarning,
+        kSuggestion,
+        kInfo,
     };
 
     class Report {
     public:
-        std::string reportMsg;
-        ErrorCodeEnum error_code;
-
-        explicit Report(std::string report_message, const ErrorCodeEnum error_code_enum = ErrorCodeEnum::FAILURE)
-            : error_code(error_code_enum) {
-
-            // Direct string buffer modification via conditional rvalue moving
-            switch (error_code) {
-                case ErrorCodeEnum::FAILURE:
-                    reportMsg = std::string(LogColor::RED) + "[Error] " + LogColor::RESET + std::move(report_message);
+        explicit Report(std::string report_message, const ErrorCodeEnum error_code_enum = ErrorCodeEnum::kFailure)
+            : error_code_(error_code_enum) {
+            switch (error_code_) {
+                case ErrorCodeEnum::kFailure:
+                    report_msg_ = std::string(LogColor::RED) + "[Error] " + LogColor::RESET + std::move(report_message);
                     break;
-                case ErrorCodeEnum::WARNING:
-                    reportMsg = std::string(LogColor::YELLOW) + "[Warning] " + LogColor::RESET + std::move(report_message);
+                case ErrorCodeEnum::kWarning:
+                    report_msg_ = std::string(LogColor::YELLOW) + "[Warning] " + LogColor::RESET + std::move(
+                                    report_message);
                     break;
-                case ErrorCodeEnum::SUGGESTION:
-                    reportMsg = std::string(LogColor::CYAN) + "[Suggestion] " + LogColor::RESET + std::move(report_message);
+                case ErrorCodeEnum::kInfo:
+                    report_msg_ = std::string(LogColor::BLUE) + "[Info] " + LogColor::RESET + std::move(report_message);
+                    break;
+                case ErrorCodeEnum::kSuggestion:
+                    report_msg_ = std::string(LogColor::CYAN) + "[Suggestion] " + LogColor::RESET + std::move(
+                                    report_message);
                     break;
                 default:
-                    reportMsg = std::move(report_message);
+                    report_msg_ = std::move(report_message);
                     break;
             }
         }
+
+        std::string_view getMessage() const { return report_msg_; }
+
+    private:
+        std::string report_msg_;
+        ErrorCodeEnum error_code_;
+
     };
 
 
-template <typename R>
+    template<typename R>
     class Reports {
     public:
         std::vector<R> errors;
         std::vector<R> warnings;
         std::vector<R> suggestions;
-        Reports(const std::vector<R> &errors, const std::vector<R> &warnings, const std::vector<R> &suggestions)
-            :errors(errors), warnings(warnings), suggestions(suggestions) { }
-        Reports() = default;
+        std::vector<R> info;
 
-        bool noErrors() const { return errors.empty(); }
-        bool noWarnings() const { return warnings.empty(); }
-        bool noSuggestions() const { return suggestions.empty(); }
+        Reports(const std::vector<R> &errors, const std::vector<R> &warnings, const std::vector<R> &suggestions,
+                const std::vector<R> &info)
+            : errors(errors), warnings(warnings), suggestions(suggestions), info(info) {
+        }
+
+        Reports() = default;
+        [[nodiscard]] bool noErrors() const { return errors.empty(); }
+        [[nodiscard]] bool noWarnings() const { return warnings.empty(); }
+        [[nodiscard]] bool noSuggestions() const { return suggestions.empty(); }
+        [[nodiscard]] bool noInfo() const { return info.empty(); }
     };
 };
-

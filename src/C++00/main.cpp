@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 
     if (!symbol_table_reports.noErrors()) {
         for (const CppZero::Report &error: symbol_table_reports.errors) {
-            std::cout << error.reportMsg << '\n';
+            std::cout << error.getMessage() << '\n';
         }
         // throw std::runtime_error("Semantic errors during symbol table build-up");
     }
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 
     if (!semantic_analysis_reports.noErrors()) {
         for (const CppZero::Report &error: semantic_analysis_reports.errors) {
-            std::cout << error.reportMsg << '\n';
+            std::cout << error.getMessage() << '\n';
         }
         // throw std::runtime_error("Semantic errors during semantic analysis");
     }

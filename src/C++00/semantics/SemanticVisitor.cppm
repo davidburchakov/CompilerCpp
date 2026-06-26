@@ -73,7 +73,7 @@ export namespace CppZero {
             int line = ctx->getStart()->getLine();
             reports.errors.emplace_back(
                 "Use of undeclared identifier '" + varName + "' at line " + std::to_string(line),
-                ErrorCodeEnum::FAILURE
+                ErrorCodeEnum::kFailure
             );
             return std::string("undeclared " + varName);
         }
@@ -98,7 +98,7 @@ export namespace CppZero {
                     reports.warnings.emplace_back(
                         "addition expression mismatch: adding " + leftType + " type with " + rightType +
                         " at line " + std::to_string(line),
-                        ErrorCodeEnum::WARNING
+                        ErrorCodeEnum::kWarning
                     );
                 }
             }

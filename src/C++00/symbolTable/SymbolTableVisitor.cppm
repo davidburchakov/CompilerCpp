@@ -7,9 +7,11 @@ module;
 // Global Module Fragment: Include non-module ANTLR runtime headers
 #include "antlr4-runtime.h"
 #include "CppBaseVisitor.h"
+#include "absl/status/status.h"
 #include "CppParser.h"
 #include <string>
 #include <any>
+
 
 export module SymbolTableVisitorModule;
 
@@ -27,7 +29,7 @@ namespace CppZero {
             if (!ctx) return;
 
             // 1. Base Case: Reached the core variable name
-            if (auto baseCtx = dynamic_cast<CppParser::BaseIdentifierContext*>(ctx)) {
+            if (auto baseCtx = dynamic_cast<CppParser::BaseIdentifierContext *>(ctx)) {
                 outSymbol.name = baseCtx->IDENTIFIER()->getText();
                 outSymbol.declaration_line = baseCtx->IDENTIFIER()->getSymbol()->getLine();
                 return;
@@ -62,13 +64,16 @@ namespace CppZero {
             }
         }
 
-        // Helper to loop through the parsed prefix modifier sequence
-        void extractModifiers(CppParser::DeclarationModifiersContext* ctx, Type& outType) {
-            // 1. Check if the context block itself is null or has no elements using .empty()
-            if (!ctx || ctx->typeModifier().empty()) {
-                // Do nothing, but we still check storage specifiers below even if typeModifiers is empty
-            } else {
-                for (auto* modifier : ctx->typeModifier()) {
+
+        absl::Status extractModifiers(CppParser::DeclarationModifiersContext *ctx, Type &outType) {
+            if (ctx == nullptr) return absl::NotFoundError("No modifiers found in context.");
+
+            // declarationModifiers
+            //     : (cvQualifier | typeSpecifier | storageSpecifier | functionPrefixSpecifier | functionPostfixSpecifier)*
+            //     ;
+
+            if (!ctx->cvQualifier().empty()) {
+                for (auto *modifier: ctx->cvQualifier()) {
                     std::string text = modifier->getText();
                     if (text == "const")    outType.is_const = true;
                     if (text == "volatile") outType.is_const = true;
@@ -77,7 +82,7 @@ namespace CppZero {
 
             // 2. Use .empty() to see if any storage modifiers (static, extern...) were parsed
             if (ctx && !ctx->storageSpecifier().empty()) {
-                for (auto* storage : ctx->storageSpecifier()) {
+                for (auto *storage: ctx->storageSpecifier()) {
                     std::string text = storage->getText();
                     if (text == "static")       outType.storage = StorageClass::kStatic;
                     if (text == "extern")       outType.storage = StorageClass::kExtern;
@@ -85,6 +90,7 @@ namespace CppZero {
                     if (text == "mutable")      outType.storage = StorageClass::kMutable;
                 }
             }
+            return absl::OkStatus();
         }
 
 
@@ -92,38 +98,46 @@ namespace CppZero {
         explicit SymbolTableVisitor(SymbolTable& table, Reports<Report> &reports)
             : symbolTable(table), reports(reports) {}
 
-        // Handle raw declarations: "const int *x;"
-        std::any visitDeclaration(CppParser::DeclarationContext *ctx) override {
-
+        /*
+         *  const char *ptr1, *ptr2, *ptr3;
+         *  Declaration modifiers and Types are declared once
+         *  but can be multiple identifiers and values
+         */
+        std::any visitVariableDeclarationClause(CppParser::VariableDeclarationClauseContext *ctx) override {
             Symbol symbol;
+            symbol.tree_node_name = "variableDeclaration";
             symbol.type.base_type = CppZero::NormalizeType(ctx->primitiveType()->getText());
 
-            extractModifiers(ctx->declarationModifiers(), symbol.type);
-            unwindDeclarator(ctx->declarator(), symbol);
-            symbol.tree_node_name = "variableDeclaration";
+            absl::Status extract_status = extractModifiers(ctx->declarationModifiers(), symbol.type);
+            if(!extract_status.ok()) {
+                reports.info.emplace_back(extract_status.ToString(), ErrorCodeEnum::kFailure);
+            }
 
-            if(!symbolTable.Insert(symbol.name, symbol)) {
-                reports.errors.emplace_back("Duplicate declaration of variable " + symbol.name +
-                    " at line: " + std::to_string(symbol.declaration_line) + ", during " + symbol.tree_node_name, ErrorCodeEnum::FAILURE);
+            if (!symbolTable.Insert(symbol.name, symbol)) {
+                reports.errors.emplace_back(
+                    "Duplicate declaration of variable " + symbol.name +
+                        " at line: " + std::to_string(symbol.declaration_line) +
+                        ", during " + symbol.tree_node_name,
+                    ErrorCodeEnum::kFailure);
             }
 
             return visitChildren(ctx);
         }
 
-        // Handle initialized declarations: "static double arr[][] = expression;"
-        std::any visitInitialization(CppParser::InitializationContext *ctx) override {
-            Symbol symbol;
-            symbol.type.base_type = ctx->primitiveType()->getText();
-
-            extractModifiers(ctx->declarationModifiers(), symbol.type);
-            unwindDeclarator(ctx->declarator(), symbol);
-            symbol.tree_node_name = "variableInitialization";
-
-            if(!symbolTable.Insert(symbol.name, symbol)) {
-                reports.errors.emplace_back("Duplicate declaration of variable " + symbol.name +
-                    " at line: " + std::to_string(symbol.declaration_line) + ", during " + symbol.tree_node_name, ErrorCodeEnum::FAILURE);
-            }
+        std::any visitInitializationLeaf(CppParser::InitializationLeafContext *ctx) override {
             return visitChildren(ctx);
+            // Symbol symbol;
+            // symbol.type.baseType = ctx->primitiveType()->getText();
+            //
+            // extractModifiers(ctx->declarationModifiers(), symbol.type);
+            // unwindDeclarator(ctx->declarator(), symbol);
+            // symbol.treeNodeName = "variableInitialization";
+            //
+            // if(!symbolTable.insert(symbol.name, symbol)) {
+            //     reports.errors.emplace_back("Duplicate declaration of variable " + symbol.name +
+            //         " at line: " + std::to_string(symbol.declarationLine) + ", during " + symbol.treeNodeName, ErrorCodeEnum::FAILURE);
+            // }
+            // return visitChildren(ctx);
         }
     };
 

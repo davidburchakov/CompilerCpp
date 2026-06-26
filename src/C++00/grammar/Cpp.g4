@@ -72,6 +72,8 @@ THREAD_LOCAL   : 'thread_local';
 VIRTUAL        : 'virtual';
 EXPLICIT       : 'explicit';
 INLINE         : 'inline';
+OVERRIDE       : 'override';
+FINAL          : 'final';
 
 /* Primitive Types & Literals */
 TRUE           : 'true' | 'True' | 'yes';
@@ -172,6 +174,10 @@ statement
     | expression SEMICOLON    #ExpressionStatement
     ;
 
+//functionDeclaration
+//    : functionPrefixSpecifier* returnType functionName '(' parameterList ')' functionPostfixSpecifier* ';'
+//    ;
+
 variableDeclaration
     : declarationModifiers primitiveType declaratorList SEMICOLON #VariableDeclarationClause
     ;
@@ -181,7 +187,8 @@ declaratorList
     ;
 
 initializedDeclarator
-    : declarator (EQUALS expression)?
+    : declarator                     #DeclarationLeaf
+    | declarator EQUALS expression   #InitializationLeaf
     ;
 
 // The Declarator captures the operators (*, &, &&, []) wrapping the variable name
@@ -201,22 +208,26 @@ primitiveType
 
 // Matches any sequence of modifiers preceding a type definition
 declarationModifiers
-    : (typeModifier | storageSpecifier | functionSpecifier)*
+    : (cvQualifier | typeSpecifier | storageSpecifier | functionPrefixSpecifier | functionPostfixSpecifier)*
     ;
 
-// Modifiers that fundamentally alter the data storage layout itself
-typeModifier
-    : CONST | VOLATILE | SIGNED | UNSIGNED
-    ;
+cvQualifier
+    : CONST | VOLATILE ;
+
+typeSpecifier
+    : SIGNED | UNSIGNED ;
 
 // Modifiers controlling lifetime scope and thread boundaries
 storageSpecifier
-    : STATIC | EXTERN | THREAD_LOCAL | MUTABLE
+    : STATIC | EXTERN | THREAD_LOCAL | MUTABLE | AUTO
     ;
 
-// Modifiers checking execution rules and optimization limits
-functionSpecifier
+functionPrefixSpecifier
     : INLINE | VIRTUAL | EXPLICIT | CONSTEXPR | CONSTEVAL | CONSTINIT
+    ;
+
+functionPostfixSpecifier
+    : NOEXCEPT | CONST | VOLATILE | FINAL | OVERRIDE
     ;
 
 expression
