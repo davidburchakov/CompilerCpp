@@ -20,7 +20,7 @@ export namespace CppZero {
         Reports<Report> &reports;
 
         // Internal helper to cleanly unpack std::any results from child visitors
-        std::string extractType(const std::any& result) {
+        std::string extractType(const std::any &result) {
             if (result.has_value() && result.type() == typeid(std::string)) {
                 return std::any_cast<std::string>(result);
             }
@@ -29,7 +29,8 @@ export namespace CppZero {
 
     public:
         explicit SemanticVisitor(SymbolTable &symbolTable, Reports<Report> &reports)
-            : symbolTable(symbolTable), reports(reports) {}
+            : symbolTable(symbolTable), reports(reports) {
+        }
 
         // ============================================================
         // 1. LITERAL LEAF NODES (Propagate types upward)
@@ -63,9 +64,9 @@ export namespace CppZero {
             std::string varName = ctx->getText();
 
             // Look up the symbol within the symbol table context
-            if (symbolTable.exists(varName)) {
+            if (symbolTable.Exists(varName)) {
                 // Returns the underlying base type string stored during your first pass
-                return symbolTable.get(varName).type.baseType;
+                return symbolTable.Get(varName).type.base_type;
             }
 
             // Log an error if a variable is used without a prior definition context
@@ -86,14 +87,13 @@ export namespace CppZero {
             if (ctx->children.size() < 3) return std::string("unknown");
 
             // Evaluate types of left-hand side and right-hand side subexpressions
-            std::string leftType  = extractType(visit(ctx->children[0]));
+            std::string leftType = extractType(visit(ctx->children[0]));
             std::string rightType = extractType(visit(ctx->children[2]));
 
             // Semantic Check Rule: Warn on direct 'double' and 'int' mix operations
             if (leftType != "unknown" && rightType != "unknown") {
                 if ((leftType == "double" && rightType == "int") ||
                     (leftType == "int" && rightType == "double")) {
-
                     int line = ctx->getStart()->getLine();
                     reports.warnings.emplace_back(
                         "addition expression mismatch: adding " + leftType + " type with " + rightType +

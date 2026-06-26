@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 
     // Run the traversal pass to capture symbols
     visitor.visit(tree);
-    symbolTable.printAll();
+    symbolTable.PrintAll();
 
     if (!symbol_table_reports.noErrors()) {
         for (const CppZero::Report &error: symbol_table_reports.errors) {

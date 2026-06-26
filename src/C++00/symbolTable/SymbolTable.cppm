@@ -1,152 +1,163 @@
 module;
 
-// 1. Global Module Fragment: Keep legacy includes isolated up here
-#include <string>
-#include <unordered_map>
-#include <iostream>
 #include <array>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
 
-// 2. Begin C++23 Module Declaration context
+#include "absl/container/flat_hash_map.h"
+
 export module SymbolTableModule;
 
 namespace CppZero {
-
-    // Tracks lifetime rules and memory layout scopes
     export enum class StorageClass {
-        Auto,
-        Static,
-        Extern,
-        ThreadLocal,
-        Mutable
+        kAuto,
+        kStatic,
+        kExtern,
+        kThreadLocal,
+        kMutable
     };
 
     export struct TypeAliasGroup {
-        std::string_view canonicalType;
-        std::array<std::string_view, 8> aliases; // Max room for 8 strings per group
-        size_t aliasCount;
+        std::string_view canonical_type;          // base type, or, hypernym
+        std::array<std::string_view, 8> aliases;  // 8 aliases at most declared in lexer rules
+        size_t alias_count;
     };
 
-    export inline constexpr std::array<TypeAliasGroup, 12> primitiveTypes {{
-        { "int32_t",   { "int32_t", "int", "long", "DWORD" }, 4 },
-        { "int128_t",  { "int128_t", "longlonglonglong", "llll", "OCTOWORD" }, 4 },
-        { "int64_t",   { "int64_t", "longlong", "ll", "QWORD" }, 4 },
-        { "int16_t",   { "int16_t", "short", "WORD" }, 3 },
-        { "int8_t",    { "int8_t", "char", "BYTE" }, 3 },
-        { "bool",      { "bool", "boolean", "true", "True", "yes", "false", "False", "no" }, 8 },
-        { "void",      { "void" }, 1 },
-        { "double",    { "double" }, 1 },
-        { "float",     { "float" }, 1 },
-        { "char16_t",  { "char16_t" }, 1 },
-        { "char32_t",  { "char32_t" }, 1 },
-        { "wchar_t",   { "wchar_t" }, 1 }
-    }};
+    // these types are described in Lexer rules. Known at compile time
+    export inline constexpr std::array<TypeAliasGroup, 12> kPrimitiveTypes{
+        {
+            {"int32_t", {"int32_t", "int", "long", "DWORD"}, 4},
+            {"int128_t", {"int128_t", "longlonglonglong", "llll", "OCTOWORD"}, 4},
+            {"int64_t", {"int64_t", "longlong", "ll", "QWORD"}, 4},
+            {"int16_t", {"int16_t", "short", "WORD"}, 3},
+            {"int8_t", {"int8_t", "char", "BYTE"}, 3},
+            {
+                "bool",
+                {"bool", "boolean", "true", "True", "yes", "false", "False", "no"},
+                8
+            },
+            {"void", {"void"}, 1},
+            {"double", {"double"}, 1},
+            {"float", {"float"}, 1},
+            {"char16_t", {"char16_t"}, 1},
+            {"char32_t", {"char32_t"}, 1},
+            {"wchar_t", {"wchar_t"}, 1},
+        }
+    };
 
-    export constexpr std::string_view normalizeType(std::string_view rawType) {
-        for (const auto& group : primitiveTypes) {
-            for (size_t i = 0; i < group.aliasCount; ++i) {
-                if (group.aliases[i] == rawType) {
-                    return group.canonicalType; // Match found! Return the standard name
+    export constexpr std::string_view NormalizeType(const std::string_view raw_type) {
+        for (const auto &group: kPrimitiveTypes) {
+            for (size_t i = 0; i < group.alias_count; ++i) {
+                if (group.aliases[i] == raw_type) {
+                    return group.canonical_type;
                 }
             }
         }
 
-        // No match found anywhere in the compile-time array mapping tiers.
-        // We throw an exception directly. (C++20/C++23 fully supports throwing exceptions in constexpr blocks!)
-        throw std::runtime_error("Compile-Time Semantic Error: Invalid or unrecognized primitive type identifier '" +
-                                 std::string(rawType) + "'");
+        // C++23 supports throwing exceptions in compile-time evaluation failures
+        throw std::runtime_error(
+            "Compile-Time Semantic Error: Invalid or unrecognized primitive type "
+            "identifier '" +
+            std::string(raw_type) + "'");
     }
 
-    // Tracks the structural signature of the data format
     export struct Type {
-        std::string baseType;           // e.g., "int", "double", "MyClass"
-        int pointerCount = 0;           // 0 = raw, 1 = ptr*, 2 = ptr**
-        int arrayDimensions = 0;        // 0 = single element, 1 = arr[], 2 = matrix[][]
-        bool isLvalueReference = false; // true = standard reference (&)
-        bool isRvalueReference = false; // true = move reference (&&)
-        bool isConst = false;           // true = constant modifier
-        bool isVolatile = false;        // true = volatile modifier
-        StorageClass storage = StorageClass::Auto;
+        std::string base_type; // e.g., "int", "double", "MyClass"
+        int pointer_count = 0;
+        int array_dimensions = 0;
+        bool is_lvalue_reference = false;
+        bool is_rvalue_reference = false;
+        bool is_const = false;
+        bool is_volatile = false;
+        StorageClass storage = StorageClass::kAuto;
     };
 
     // Tracks the concrete variable instance identity
     export struct Symbol {
-        std::string name;          // Variable name identifier (e.g., "matrix")
-        std::string treeNodeName;  // Tree node (e.g., "variableDeclaration")
-        Type type;                 // Composition mapping block
-        int declarationLine = 0;   // Line mapping location context for compiler debugging
+        std::string name; // Identifier
+        std::string tree_node_name; // Abstract Syntax Tree Node
+        Type type; // info, e.g., is_const, storage type
+        int declaration_line = 0; // respective line
     };
 
-    // Container matching scope mappings
     export class SymbolTable {
-    private:
-        std::unordered_map<std::string, Symbol> variables;
-
     public:
-        bool insert(const std::string& name, const Symbol& symbol, const bool log = false) {
-            if (variables.contains(name)) {
+        bool Insert(absl::string_view name, const Symbol &symbol, bool log = false) {
+            if (symbol_table_.contains(name)) {
                 if (log) {
-                    std::cerr << "Semantic Error (Symbol Table insert()): Redefinition of variable '" << name
-                              << "' on line " << symbol.declarationLine << "\n";
+                    std::cerr << "Semantic Error (Symbol Table Insert()): Redefinition of "
+                            "variable '"
+                            << name << "' on line " << symbol.declaration_line << "\n";
                 }
                 return false;
             }
-            variables[name] = symbol;
+            // Heterogeneous lookup allows lazy allocation only when inserting a new key
+            symbol_table_.emplace(name, symbol);
             return true;
         }
 
-        bool exists(const std::string& name) const {
-            return variables.contains(name);
-        }
+        bool Exists(absl::string_view name) const { return symbol_table_.contains(name); }
 
-        Symbol get(const std::string& name) const {
-            if (variables.contains(name)) {
-                return variables.at(name);
+        Symbol Get(absl::string_view name) const {
+            auto it = symbol_table_.find(name);
+            if (it != symbol_table_.end()) {
+                return it->second;
             }
             return Symbol{};
         }
 
-        // 🚀 NEW: Iterates and prints the exact structural layout of every collected variable
-        void printAll() const {
+        void PrintAll() const {
             std::cout << "\n========================================";
             std::cout << "\n  SYMBOL TABLE CONTENTS (CppZero)";
             std::cout << "\n========================================\n";
 
-            if (variables.empty()) {
+            if (symbol_table_.empty()) {
                 std::cout << " (No variables declared)\n";
                 std::cout << "========================================\n";
                 return;
             }
 
-            for (const auto& [name, symbol] : variables) {
+            for (const auto &[name, symbol]: symbol_table_) {
                 std::cout << "• Variable: " << name << "\n";
-                std::cout << "  - Line:       " << symbol.declarationLine << "\n";
+                std::cout << "  - Line:       " << symbol.declaration_line << "\n";
 
                 // Print Modifiers
                 std::cout << "  - Modifiers:  ";
-                if (symbol.type.isConst) std::cout << "const ";
-                if (symbol.type.isVolatile) std::cout << "volatile ";
+                if (symbol.type.is_const) std::cout << "const ";
+                if (symbol.type.is_volatile) std::cout << "volatile ";
 
-                if (symbol.type.storage == StorageClass::Static) std::cout << "[static] ";
-                if (symbol.type.storage == StorageClass::Extern) std::cout << "[extern] ";
-                if (symbol.type.storage == StorageClass::ThreadLocal) std::cout << "[thread_local] ";
+                if (symbol.type.storage == StorageClass::kStatic) std::cout << "[static] ";
+                if (symbol.type.storage == StorageClass::kExtern) std::cout << "[extern] ";
+                if (symbol.type.storage == StorageClass::kThreadLocal) {
+                    std::cout << "[thread_local] ";
+                }
                 std::cout << "\n";
 
                 // Print Type Shape
-                std::cout << "  - Base Type:  " << symbol.type.baseType << "\n";
-                std::cout << "  - Pointers:   " << std::string(symbol.type.pointerCount, '*') << " (" << symbol.type.pointerCount << ")\n";
+                std::cout << "  - Base Type:  " << symbol.type.base_type << "\n";
+                std::cout << "  - Pointers:   " << std::string(symbol.type.pointer_count, '*')
+                        << " (" << symbol.type.pointer_count << ")\n";
                 std::cout << "  - References: ";
-                if (symbol.type.isLvalueReference) std::cout << "lvalue (&)";
-                else if (symbol.type.isRvalueReference) std::cout << "rvalue (&&)";
-                else std::cout << "none";
+                if (symbol.type.is_lvalue_reference) {
+                    std::cout << "lvalue (&)";
+                } else if (symbol.type.is_rvalue_reference) {
+                    std::cout << "rvalue (&&)";
+                } else {
+                    std::cout << "none";
+                }
                 std::cout << "\n";
 
                 // Print Array Shape
-                std::cout << "  - Dimensions: " << symbol.type.arrayDimensions << " "
-                          << std::string(symbol.type.arrayDimensions * 2, ']') // Emulates [][] layouts
-                          << "\n";
+                std::cout << "  - Dimensions: " << symbol.type.array_dimensions << " "
+                        << std::string(symbol.type.array_dimensions * 2, ']')
+                        << "\n";
                 std::cout << "----------------------------------------\n";
             }
         }
-    };
 
+    private:
+        absl::flat_hash_map<std::string, Symbol> symbol_table_;
+    };
 } // namespace CppZero
