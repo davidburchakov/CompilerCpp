@@ -2,32 +2,41 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QTreeWidget>
+#include <QGraphicsScene>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow {
+class MainWindow : public QMainWindow
+{
     Q_OBJECT
 
 public:
-    // ✅ Keep this signature exactly as it was originally
-    explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override;
+    MainWindow(QWidget *parent = nullptr);
 
-    // ✅ Add this separate method to receive the assembly text safely
-    void setAssemblyText(const std::string &assemblyCode);
+    ~MainWindow();
+
+    void setOptimizedAssemblyText(const std::string &assemblyCode);
+    void setPlainAssemblyText(const std::string &assemblyCode);
+    void setSSAIntermediateText(const std::string &ssaCode);
+protected:
+    // Intercepts middle mouse clicks and scroll events on the canvas
+
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
     void onTextChanged();
-    void buildAST(const std::string &code) const;
 
 private:
-    Ui::MainWindow *ui;
+    void buildAST(const std::string &code) const;
 
-    void addNode(QTreeWidgetItem *parent,
-                 const std::string &text);
+    Ui::MainWindow *ui;
+    QGraphicsScene *astScene;
+
+    // Tracking points for panning state
+    bool isPanning = false;
+    QPoint panLastMousePos;
 };
 
-#endif
+#endif // MAINWINDOW_H

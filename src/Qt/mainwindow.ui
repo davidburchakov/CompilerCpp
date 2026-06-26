@@ -25,7 +25,7 @@
                     </widget>
                 </item>
 
-                <!-- Middle Column: AST Viewer -->
+                <!-- Second Column: AST Viewer -->
                 <item>
                     <widget class="QTreeWidget" name="astTree">
                         <property name="headerLabels">
@@ -36,9 +36,33 @@
                     </widget>
                 </item>
 
-                <!-- Right Column: New Assembly Output Viewer -->
+                <!-- Third Column: SSA Intermediate Representation Viewer -->
                 <item>
-                    <widget class="QPlainTextEdit" name="assemblyViewer">
+                    <widget class="QPlainTextEdit" name="ssaViewer">
+                        <property name="readOnly">
+                            <bool>true</bool>
+                        </property>
+                        <property name="placeholderText">
+                            <string>SSA Intermediate Representation...</string>
+                        </property>
+                    </widget>
+                </item>
+                
+                <!-- Fourth Column: Unoptimized Assembly Output Viewer -->
+                <item>
+                    <widget class="QPlainTextEdit" name="plainAssemblyViewer">
+                        <property name="readOnly">
+                            <bool>true</bool> <!-- Prevent the user from typing over generated code -->
+                        </property>
+                        <property name="placeholderText">
+                            <string>Target assembly code appears here...</string>
+                        </property>
+                    </widget>
+                </item>
+
+                <!-- Fifth Column: Optimized Assembly Output Viewer -->
+                <item>
+                    <widget class="QPlainTextEdit" name="optimizedAssemblyViewer">
                         <property name="readOnly">
                             <bool>true</bool> <!-- Prevent the user from typing over generated code -->
                         </property>
