@@ -1,7 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-// 1. Undefine 'emit' so it doesn't break ANTLR's Lexer::emit method
 #ifdef emit
 #undef emit
 #endif
@@ -10,7 +9,6 @@
 #include "CppLexer.h"
 #include "CppParser.h"
 
-// 2. Redefine 'emit' back to nothing so Qt's framework continues working smoothly
 #ifndef emit
 #define emit
 #endif
@@ -22,34 +20,27 @@
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsTextItem>
-#include <QLayout> // Added for dynamic widget swapping
+#include <QSplitter>  // Required for splitter handling
 #include <QPen>
 #include <QBrush>
 #include <QFont>
 #include <cmath>
-#include <QMouseEvent> // Added for click event tracking
-#include <QWheelEvent> // Added for scroll event tracking
-#include <QScrollBar>  // Added to shift scene positions manually
+#include <QMouseEvent>
+#include <QWheelEvent>
+#include <QScrollBar>
 
-// ============================================================
-// 3. BRING IN COMPILER MODULES FOR LIVE RE-COMPILATION
-// ============================================================
 import ASTOptimizer;
 import AssemblyGenerator;
 
 using namespace antlr4;
 
-// ============================================================================
-// 4. CUSTOM WRAPPER TO MAKE NODES INTERACTIVELY MOVABLE
-// ============================================================================
 class ASTNodeItem : public QGraphicsEllipseItem {
 public:
-    QGraphicsLineItem* parentLine = nullptr;
-    std::vector<QGraphicsLineItem*> childLines;
+    QGraphicsLineItem *parentLine = nullptr;
+    std::vector<QGraphicsLineItem *> childLines;
 
-    ASTNodeItem(double x, double y, double r, QGraphicsItem* parent = nullptr)
-        : QGraphicsEllipseItem(x - r, y - r, r * 2, r * 2, parent)
-    {
+    ASTNodeItem(double x, double y, double r, QGraphicsItem *parent = nullptr)
+        : QGraphicsEllipseItem(x - r, y - r, r * 2, r * 2, parent) {
         setFlags(QGraphicsItem::ItemIsMovable | QGraphicsItem::ItemSendsGeometryChanges);
     }
 
@@ -65,7 +56,7 @@ protected:
                 parentLine->setLine(line);
             }
 
-            for (QGraphicsLineItem* childLine : childLines) {
+            for (QGraphicsLineItem *childLine: childLines) {
                 QLineF line = childLine->line();
                 line.setP1(line.p1() + offset);
                 childLine->setLine(line);
@@ -75,43 +66,73 @@ protected:
     }
 };
 
-// ============================================================
-// 5. MAINWINDOW CLASS IMPLEMENTATIONS
-// ============================================================
-
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow)
-{
+    : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
-    // DYNAMIC WIDGET SWAP
+    ui->zoomInButton->setFixedSize(24, 24);
+    ui->zoomOutButton->setFixedSize(24, 24);
+
+    QString semiTransparentButtonStyle =
+            "QPushButton {"
+            "    border: none;"
+            "    border-radius: 12px;"
+            "    /* 230, 242, 255 is your AST theme light blue. 0.2 alpha = 80% transparent background */"
+            "    background-color: rgba(230, 242, 255, 0.2);"
+            "    color: #276f8f;"
+            "    font-weight: bold;"
+            "    font-size: 14px;"
+            "}"
+            "QPushButton:hover {"
+            "    /* Translucent blue becomes more crisp on hover (45% opacity) */"
+            "    background-color: rgba(39, 111, 143, 0.45);"
+            "    color: #ffffff;" // Flip text color to white for contrast
+            "}"
+            "QPushButton:pressed {"
+            "    /* Solid tint on click */"
+            "    background-color: rgba(39, 111, 143, 0.8);"
+            "}";
+
+    ui->zoomInButton->setStyleSheet(semiTransparentButtonStyle);
+    ui->zoomOutButton->setStyleSheet(semiTransparentButtonStyle);
+    // Find the new inner layout container holding the tree placeholder
     QWidget *oldTree = ui->astTree;
-    QLayout *parentLayout = oldTree->parentWidget() ? oldTree->parentWidget()->layout() : nullptr;
+    QVBoxLayout *containerLayout = ui->centralwidget->findChild<QVBoxLayout *>("astContainerLayout");
 
     QGraphicsView *graphicsView = new QGraphicsView(this);
-    if (parentLayout) {
-        parentLayout->replaceWidget(oldTree, graphicsView);
+    if (containerLayout) {
+        // Swap out the mock tree widget safely inside the layout stack
+        containerLayout->replaceWidget(oldTree, graphicsView);
+        oldTree->deleteLater();
+    } else {
+        oldTree->deleteLater();
     }
-    oldTree->deleteLater();
 
-    ui->astTree = reinterpret_cast<QTreeWidget*>(graphicsView);
+    ui->astTree = reinterpret_cast<QTreeWidget *>(graphicsView);
 
-    // CANVAS ATTRIBUTES & CONTROLS SETUP
+    // --- Wire Up Button Clicks ---
+    connect(ui->zoomInButton, &QPushButton::clicked, this, &MainWindow::onZoomInClicked);
+    connect(ui->zoomOutButton, &QPushButton::clicked, this, &MainWindow::onZoomOutClicked);
+
+    // Configure proportional startup layouts
+    QSplitter *verticalSplitter = ui->centralwidget->findChild<QSplitter *>("mainVerticalSplitter");
+    if (verticalSplitter) {
+        verticalSplitter->setSizes(QList<int>({600, 150}));
+    }
+    QSplitter *horizontalSplitter = ui->centralwidget->findChild<QSplitter *>("columnsHorizontalSplitter");
+    if (horizontalSplitter) {
+        horizontalSplitter->setSizes(QList<int>({220, 380, 200, 200, 200}));
+    }
+
     astScene = new QGraphicsScene(this);
     graphicsView->setScene(astScene);
     graphicsView->setRenderHint(QPainter::Antialiasing);
 
-    // Disable traditional scrollbars to keep a clean diagram workspace
     graphicsView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
-    // Enable scroll-hand drag modifications safely
     graphicsView->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
-
-    // Install the event filter directly onto the interactive viewport
     graphicsView->viewport()->installEventFilter(this);
 
-    // Load file stream
     QFile file("/home/incidence/Desktop/CompilerCpp/src/C++00/input.txt");
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&file);
@@ -123,18 +144,32 @@ MainWindow::MainWindow(QWidget *parent)
     onTextChanged();
 }
 
+void MainWindow::onZoomInClicked() {
+    QGraphicsView *view = reinterpret_cast<QGraphicsView *>(ui->astTree);
+    if (view) {
+        view->scale(1.15, 1.15); // Matches mouse wheel step scale
+    }
+}
+
+void MainWindow::onZoomOutClicked() {
+    QGraphicsView *view = reinterpret_cast<QGraphicsView *>(ui->astTree);
+    if (view) {
+        view->scale(1.0 / 1.15, 1.0 / 1.15);
+    }
+}
+
 MainWindow::~MainWindow() {
     delete ui;
 }
 
-void MainWindow::onTextChanged()
-{
+void MainWindow::onTextChanged() {
     std::string code = ui->codeEditor->toPlainText().toStdString();
 
     if (code.empty()) {
         astScene->clear();
         ui->optimizedAssemblyViewer->clear();
         ui->plainAssemblyViewer->clear();
+        ui->errorConsole->clear();
         return;
     }
 
@@ -148,39 +183,30 @@ void MainWindow::onTextChanged()
     if (parser.getNumberOfSyntaxErrors() > 0) {
         ui->optimizedAssemblyViewer->setPlainText("# Syntax Error: Fix input code to generate assembly...");
         ui->plainAssemblyViewer->setPlainText("# Syntax Error");
+
+        std::string errorMsg = "[Syntax Error] Parse aborted. Found " +
+                               std::to_string(parser.getNumberOfSyntaxErrors()) +
+                               " structural syntax anomaly tokens.";
+        ui->errorConsole->setPlainText(QString::fromStdString(errorMsg));
+
         buildAST(code);
         return;
     }
 
-    // ============================
-    // 1. UNOPTIMIZED ASSEMBLY
-    // ============================
+    ui->errorConsole->clear();
+
     CppZero::AssemblyGenerator rawGenerator;
     std::string unoptimizedAssembly = rawGenerator.generateAssembly(tree);
 
-    // ============================
-    // 2. OPTIMIZER + OPTIMIZED ASM
-    // ============================
     CppZero::ASTOptimizer optimizer;
     std::any optimizationResult = optimizer.optimize(tree);
 
     CppZero::AssemblyGenerator optimizedGenerator(optimizationResult);
     std::string optimizedAssembly = optimizedGenerator.generateAssembly(tree);
 
-    // ============================
-    // 3. UI OUTPUT
-    // ============================
-    ui->plainAssemblyViewer->setPlainText(
-        QString::fromStdString(unoptimizedAssembly)
-    );
+    ui->plainAssemblyViewer->setPlainText(QString::fromStdString(unoptimizedAssembly));
+    ui->optimizedAssemblyViewer->setPlainText(QString::fromStdString(optimizedAssembly));
 
-    ui->optimizedAssemblyViewer->setPlainText(
-        QString::fromStdString(optimizedAssembly)
-    );
-
-    // ============================
-    // 4. AST VISUALIZATION
-    // ============================
     buildAST(code);
 }
 
@@ -188,25 +214,23 @@ void MainWindow::setOptimizedAssemblyText(const std::string &assemblyCode) {
     ui->optimizedAssemblyViewer->setPlainText(QString::fromStdString(assemblyCode));
 }
 
-void MainWindow::setPlainAssemblyText(const std::string &assemblyCode)
-{
-    ui->plainAssemblyViewer->setPlainText(
-        QString::fromStdString(assemblyCode)
-    );
+void MainWindow::setPlainAssemblyText(const std::string &assemblyCode) {
+    ui->plainAssemblyViewer->setPlainText(QString::fromStdString(assemblyCode));
 }
 
-void MainWindow::setSSAIntermediateText(const std::string &ssaCode)
-{
-    ui->ssaViewer->setPlainText(
-        QString::fromStdString(ssaCode)
-    );
+void MainWindow::setSSAIntermediateText(const std::string &ssaCode) {
+    ui->ssaViewer->setPlainText(QString::fromStdString(ssaCode));
 }
 
-// ============================================================================
-// 6. BUILD AST IMPLEMENTATION
-// ============================================================================
-void MainWindow::buildAST(const std::string &code) const
-{
+void MainWindow::setErrorLogText(const std::string &errorLog) {
+    ui->errorConsole->setPlainText(QString::fromStdString(errorLog));
+}
+
+void MainWindow::clearErrorLog() {
+    ui->errorConsole->clear();
+}
+
+void MainWindow::buildAST(const std::string &code) const {
     astScene->clear();
     if (code.empty()) return;
 
@@ -223,26 +247,26 @@ void MainWindow::buildAST(const std::string &code) const
 
     auto isValidNode = [&](tree::ParseTree *node) -> bool {
         if (!node) return false;
-        if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext*>(node)) {
+        if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext *>(node)) {
             std::string ruleName = parser.getRuleNames()[ruleContext->getRuleIndex()];
             if (ruleName == "declarationModifiers" && node->children.empty()) return false;
             return true;
         }
-        if (auto *terminalNode = dynamic_cast<tree::TerminalNode*>(node)) {
+        if (auto *terminalNode = dynamic_cast<tree::TerminalNode *>(node)) {
             std::string tokenText = terminalNode->getText();
             return (tokenText.find_first_not_of(" \t\r\n") != std::string::npos);
         }
         return false;
     };
 
-    std::function<double(tree::ParseTree*)> getSubtreeWidth;
-    std::unordered_map<tree::ParseTree*, double> cachedWidths;
+    std::function<double(tree::ParseTree *)> getSubtreeWidth;
+    std::unordered_map<tree::ParseTree *, double> cachedWidths;
 
     getSubtreeWidth = [&](tree::ParseTree *node) -> double {
         if (!isValidNode(node)) return 0.0;
         double childrenWidth = 0.0;
         size_t visibleChildren = 0;
-        for (auto *child : node->children) {
+        for (auto *child: node->children) {
             if (isValidNode(child)) {
                 childrenWidth += getSubtreeWidth(child);
                 visibleChildren++;
@@ -255,9 +279,9 @@ void MainWindow::buildAST(const std::string &code) const
     };
     getSubtreeWidth(tree);
 
-    std::function<ASTNodeItem*(tree::ParseTree*, double, double, ASTNodeItem*, double, double)> drawTree;
-    drawTree = [&](tree::ParseTree *node, double x, double y, ASTNodeItem *parentItem, double pX, double pY) -> ASTNodeItem*
-    {
+    std::function<ASTNodeItem*(tree::ParseTree *, double, double, ASTNodeItem *, double, double)> drawTree;
+    drawTree = [&](tree::ParseTree *node, double x, double y, ASTNodeItem *parentItem, double pX,
+                   double pY) -> ASTNodeItem * {
         if (!isValidNode(node)) return nullptr;
 
         ASTNodeItem *circle = new ASTNodeItem(x, y, nodeRadius);
@@ -267,12 +291,11 @@ void MainWindow::buildAST(const std::string &code) const
         QColor nodeBgColor = Qt::black;
         QColor nodeTextColor = Qt::white;
 
-        if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext*>(node)) {
+        if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext *>(node)) {
             nodeText = QString::fromStdString(parser.getRuleNames()[ruleContext->getRuleIndex()]);
             nodeBgColor = QColor(230, 242, 255);
-            nodeTextColor = QColor(39, 111, 143);//QColor(1, 51, 153);
-        }
-        else if (auto *terminalNode = dynamic_cast<tree::TerminalNode*>(node)) {
+            nodeTextColor = QColor(39, 111, 143);
+        } else if (auto *terminalNode = dynamic_cast<tree::TerminalNode *>(node)) {
             nodeText = QString::fromStdString(terminalNode->getText());
             if (nodeText == "<EOF>") {
                 nodeBgColor = QColor(255, 230, 230);
@@ -307,7 +330,7 @@ void MainWindow::buildAST(const std::string &code) const
         textItem->setPos(x - tW / 2.0, y - tH / 2.0);
 
         double currentLeftX = x - cachedWidths[node] / 2.0;
-        for (auto *child : node->children) {
+        for (auto *child: node->children) {
             if (isValidNode(child)) {
                 double childWidth = cachedWidths[child];
                 double childTargetX = currentLeftX + childWidth / 2.0;
@@ -323,36 +346,24 @@ void MainWindow::buildAST(const std::string &code) const
     }
 }
 
-// ============================================================================
-// CANVAS PANNING AND ZOOMING CONTROLS (MIDDLE MOUSE CLICK & WHEEL)
-// ============================================================================
-bool MainWindow::eventFilter(QObject *watched, QEvent *event)
-{
-    // Access our runtime view via the safety cast pointer
-    QGraphicsView *view = reinterpret_cast<QGraphicsView*>(ui->astTree);
+bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
+    QGraphicsView *view = reinterpret_cast<QGraphicsView *>(ui->astTree);
 
     if (view && watched == view->viewport()) {
         switch (event->type()) {
-
-            // 1. ZOOM IN & ZOOM OUT VIA MOUSE WHEEL SCROLL
             case QEvent::Wheel: {
-                QWheelEvent *wheelEvent = static_cast<QWheelEvent*>(event);
+                QWheelEvent *wheelEvent = static_cast<QWheelEvent *>(event);
                 double scaleFactor = 1.15;
-
                 if (wheelEvent->angleDelta().y() > 0) {
-                    // Zoom In
                     view->scale(scaleFactor, scaleFactor);
                 } else {
-                    // Zoom Out
                     view->scale(1.0 / scaleFactor, 1.0 / scaleFactor);
                 }
                 wheelEvent->accept();
                 return true;
             }
-
-            // 2. DETECT MIDDLE CLICK PRESS TO INITIATE PANNING
             case QEvent::MouseButtonPress: {
-                QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+                QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
                 if (mouseEvent->button() == Qt::MiddleButton) {
                     isPanning = true;
                     panLastMousePos = mouseEvent->pos();
@@ -362,27 +373,20 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                 }
                 break;
             }
-
-            // 3. SHIFT CANVAS COORDINATES DYNAMICALLY DURING MIDDLE-DRAG
             case QEvent::MouseMove: {
-                QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+                QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
                 if (isPanning) {
                     QPoint delta = mouseEvent->pos() - panLastMousePos;
                     panLastMousePos = mouseEvent->pos();
-
-                    // Shift view scroll bars relative to frame movement scale
                     view->horizontalScrollBar()->setValue(view->horizontalScrollBar()->value() - delta.x());
                     view->verticalScrollBar()->setValue(view->verticalScrollBar()->value() - delta.y());
-
                     mouseEvent->accept();
                     return true;
                 }
                 break;
             }
-
-            // 4. RELEASE PANNING STATE ON MIDDLE MOUSE BUTTON RELEASE
             case QEvent::MouseButtonRelease: {
-                QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+                QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
                 if (mouseEvent->button() == Qt::MiddleButton) {
                     isPanning = false;
                     view->unsetCursor();
@@ -391,7 +395,6 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                 }
                 break;
             }
-
             default:
                 break;
         }
