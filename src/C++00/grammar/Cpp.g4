@@ -200,13 +200,11 @@ declarator
     | IDENTIFIER                 #BaseIdentifier    // Core variable name anchor boundary
     ;
 
-// 4. Groups all your type lexer tokens into one parser concept
 primitiveType
     : BOOL | VOID | DOUBLE | FLOAT | INT128 | INT64 | INT32 | INT16 | INT8
     | CHAR16_T | CHAR32_T | WCHAR_T
     ;
 
-// Matches any sequence of modifiers preceding a type definition
 declarationModifiers
     : (cvQualifier | typeSpecifier | storageSpecifier | compileTimeSpecifier )*
     ;
@@ -217,7 +215,6 @@ cvQualifier
 typeSpecifier
     : SIGNED | UNSIGNED ;
 
-// Modifiers controlling lifetime scope and thread boundaries
 storageSpecifier
     : STATIC | EXTERN | THREAD_LOCAL | MUTABLE | AUTO
     ;
