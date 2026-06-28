@@ -1,6 +1,3 @@
-// ============================================================
-// 1. TRADITIONAL HEADERS & LEGACY INCLUDES
-// ============================================================
 #include <QApplication>
 #include <QFile>
 #include <QTextStream>
@@ -8,9 +5,8 @@
 #include <QDebug>
 #include <fstream>
 #include <iostream>
-#include <stdexcept> // Required for std::runtime_error
+#include <stdexcept> 
 
-// Wipe out Qt's 'emit' keyword macro mapping before loading ANTLR
 #undef emit
 
 #include "antlr4-runtime.h"
@@ -18,9 +14,6 @@
 #include "CppParser.h"
 #include "../Qt/mainwindow.h"
 
-// ============================================================
-// 2. MODERN C++23 MODULE IMPORTS
-// ============================================================
 import SymbolTableModule;
 import SymbolTableVisitorModule;
 import SemanticAnalysis;
@@ -32,44 +25,46 @@ import Reports;
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
 
-    // Load your input source stream file
+    MainWindow window;
+
     std::ifstream fileStream("/home/incidence/Desktop/CompilerCpp/src/C++00/input.txt");
     if (!fileStream.is_open()) {
         qCritical() << "Semantic Error: Could not locate input.txt in the runtime folder!";
-        return 1;
+        window.setErrorLogText("[Fatal Error] Could not locate input.txt file.");
+        window.show();
+        return app.exec();
     }
 
-    // Feed the data through the Lexer and generate tokens
     antlr4::ANTLRInputStream input(fileStream);
     CppLexer lexer(&input);
     antlr4::CommonTokenStream tokens(&lexer);
 
-    // Instantiate the parser and build the AST
     CppParser parser(&tokens);
     CppParser::TranslationUnitContext* tree = parser.translationUnit();
 
-    // Throw an exception if any syntax errors exist
     if (parser.getNumberOfSyntaxErrors() > 0) {
-        throw std::runtime_error("Fatal: Compilation aborted due to " +
-                                 std::to_string(parser.getNumberOfSyntaxErrors()) +
-                                 " syntax error(s).");
+        std::string syntaxErrorLog = "[Syntax Error] Found " + 
+                                     std::to_string(parser.getNumberOfSyntaxErrors()) + 
+                                     " layout syntax errors. Check input source.";
+        window.setErrorLogText(syntaxErrorLog);
+        window.show();
+        delete tree;
+        return app.exec();
     }
 
-    // This code only runs if the code above has 0 errors
     CppZero::Logger::printPrettyAST(tree, parser.getRuleNames());
 
-    // Instantiate Table and Visitor data containers
     CppZero::SymbolTable symbolTable;
     CppZero::Reports<CppZero::Report> symbol_table_reports;
     CppZero::SymbolTableVisitor visitor(symbolTable, symbol_table_reports);
 
-    // Run the traversal pass to capture symbols
     visitor.visit(tree);
     symbolTable.PrintAll();
 
+    std::string aggregatedLog;
+
     if (!symbol_table_reports.noErrors()) {
-        std::cout << symbol_table_reports.toString() << '\n';
-        // throw std::runtime_error("Semantic errors during symbol table build-up");
+        aggregatedLog += symbol_table_reports.toString() + "\n";
     }
 
     CppZero::Reports<CppZero::Report> semantic_analysis_reports;
@@ -77,16 +72,11 @@ int main(int argc, char *argv[]) {
     semantic_analysis.analyse(tree);
 
     if (!semantic_analysis_reports.noErrors()) {
-        for (const CppZero::Report &error: semantic_analysis_reports.errors) {
-            std::cout << error.getMessage() << '\n';
+        for (const CppZero::Report &error : semantic_analysis_reports.errors) {
+            aggregatedLog += std::string(error.getMessage()) + "\n";
         }
-        // throw std::runtime_error("Semantic errors during semantic analysis");
     }
 
-
-    // ============================================================
-    // 3. OPTIMIZATION PHASE (Constant Folding Calculation)
-    // ============================================================
     std::cout << "\nStarting Optimization Pass...\n";
     CppZero::ASTOptimizer optimizer;
     std::any optimizationResult = optimizer.optimize(tree);
@@ -96,23 +86,19 @@ int main(int argc, char *argv[]) {
                   << std::any_cast<int>(optimizationResult) << "\n";
     }
 
-    // ============================================================
-    // 4. TRANSLATION TO ASSEMBLY PHASE
-    // ============================================================
     std::cout << "\nStarting Code Generation (Translating to x86-64 Assembly)...\n";
     CppZero::AssemblyGenerator generator(optimizationResult);
     std::string finalAssembly = generator.generateAssembly(tree);
 
-    std::cout << "--- Generated Assembly Output ---\n" << finalAssembly << "---------------------------------\n";
-
-
-    qInfo() << "AST semantic processing complete. Launching interface tree viewer...";
-
-    // Launch GUI View and pass the finalAssembly variable block inside
-    MainWindow window;
+    // Populate all interface fields safely
     window.setOptimizedAssemblyText(finalAssembly);
-    window.show();
+    
+    if (!aggregatedLog.empty()) {
+        window.setErrorLogText(aggregatedLog);
+    }
 
+    // window.show();
+    window.showMaximized();
     delete tree;
-    return QApplication::exec();
+    return app.exec();
 }

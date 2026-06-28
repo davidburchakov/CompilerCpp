@@ -6,72 +6,92 @@
             <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>1200</width> <!-- Increased window size for three columns -->
-                <height>650</height>
+                <width>1920</width>
+                <height>1080</height>
             </rect>
         </property>
         <property name="windowTitle">
             <string>ANTLR AST &amp; Assembly Viewer</string>
         </property>
         <widget class="QWidget" name="centralwidget">
-            <layout class="QHBoxLayout" name="horizontalLayout">
-
-                <!-- Left Column: Source Editor -->
+            <layout class="QVBoxLayout" name="mainVerticalLayout">
+                <property name="spacing">
+                    <number>0</number>
+                </property>
+                <property name="leftMargin">
+                    <number>6</number>
+                </property>
+                <property name="topMargin">
+                    <number>6</number>
+                </property>
+                <property name="rightMargin">
+                    <number>6</number>
+                </property>
+                <property name="bottomMargin">
+                    <number>6</number>
+                </property>
                 <item>
-                    <widget class="QPlainTextEdit" name="codeEditor">
-                        <property name="plainText">
-                            <string>1 + 2 + 3 + 4 + 5;</string>
+                    <widget class="QSplitter" name="mainVerticalSplitter">
+                        <property name="orientation">
+                            <enum>Qt::Vertical</enum>
                         </property>
-                    </widget>
-                </item>
 
-                <!-- Second Column: AST Viewer -->
-                <item>
-                    <widget class="QTreeWidget" name="astTree">
-                        <property name="headerLabels">
-                            <stringlist>
-                                <string>AST Structure</string>
-                            </stringlist>
-                        </property>
-                    </widget>
-                </item>
+                        <widget class="QSplitter" name="columnsHorizontalSplitter">
+                            <property name="orientation">
+                                <enum>Qt::Horizontal</enum>
+                            </property>
 
-                <!-- Third Column: SSA Intermediate Representation Viewer -->
-                <item>
-                    <widget class="QPlainTextEdit" name="ssaViewer">
+                            <widget class="QPlainTextEdit" name="codeEditor">
+                                <property name="plainText">
+                                    <string>1 + 2 + 3 + 4 + 5;</string>
+                                </property>
+                            </widget>
+
+                            <widget class="QTreeWidget" name="astTree">
+                                <property name="headerLabels">
+                                    <stringlist>
+                                        <string>AST Structure</string>
+                                    </stringlist>
+                                </property>
+                            </widget>
+
+                            <widget class="QPlainTextEdit" name="ssaViewer">
+                                <property name="readOnly">
+                                    <bool>true</bool>
+                                </property>
+                                <property name="placeholderText">
+                                    <string>SSA Intermediate Representation...</string>
+                                </property>
+                            </widget>
+
+                            <widget class="QPlainTextEdit" name="plainAssemblyViewer">
+                                <property name="readOnly">
+                                    <bool>true</bool>
+                                </property>
+                                <property name="placeholderText">
+                                    <string>Target assembly code appears here...</string>
+                                </property>
+                            </widget>
+
+                            <widget class="QPlainTextEdit" name="optimizedAssemblyViewer">
+                                <property name="readOnly">
+                                    <bool>true</bool>
+                                </property>
+                                <property name="placeholderText">
+                                    <string>Target assembly code appears here...</string>
+                                </property>
+                            </widget>
+                        </widget> <widget class="QPlainTextEdit" name="errorConsole">
                         <property name="readOnly">
                             <bool>true</bool>
                         </property>
                         <property name="placeholderText">
-                            <string>SSA Intermediate Representation...</string>
+                            <string>Diagnostic diagnostics, compiler errors, or semantic warnings will display here...</string>
                         </property>
                     </widget>
-                </item>
-                
-                <!-- Fourth Column: Unoptimized Assembly Output Viewer -->
-                <item>
-                    <widget class="QPlainTextEdit" name="plainAssemblyViewer">
-                        <property name="readOnly">
-                            <bool>true</bool> <!-- Prevent the user from typing over generated code -->
-                        </property>
-                        <property name="placeholderText">
-                            <string>Target assembly code appears here...</string>
-                        </property>
-                    </widget>
-                </item>
 
-                <!-- Fifth Column: Optimized Assembly Output Viewer -->
-                <item>
-                    <widget class="QPlainTextEdit" name="optimizedAssemblyViewer">
-                        <property name="readOnly">
-                            <bool>true</bool> <!-- Prevent the user from typing over generated code -->
-                        </property>
-                        <property name="placeholderText">
-                            <string>Target assembly code appears here...</string>
-                        </property>
                     </widget>
                 </item>
-
             </layout>
         </widget>
     </widget>

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QGraphicsScene>
+#include <string>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -14,15 +15,15 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow(QWidget *parent = nullptr);
-
     ~MainWindow();
 
     void setOptimizedAssemblyText(const std::string &assemblyCode);
     void setPlainAssemblyText(const std::string &assemblyCode);
     void setSSAIntermediateText(const std::string &ssaCode);
-protected:
-    // Intercepts middle mouse clicks and scroll events on the canvas
+    void setErrorLogText(const std::string &errorLog);
+    void clearErrorLog();
 
+protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
@@ -34,7 +35,6 @@ private:
     Ui::MainWindow *ui;
     QGraphicsScene *astScene;
 
-    // Tracking points for panning state
     bool isPanning = false;
     QPoint panLastMousePos;
 };
