@@ -6,21 +6,28 @@
 #include <string>
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
+namespace Ui {
+    class MainWindow;
+}
+
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
     MainWindow(QWidget *parent = nullptr);
+
     ~MainWindow();
 
     void setOptimizedAssemblyText(const std::string &assemblyCode);
+
     void setPlainAssemblyText(const std::string &assemblyCode);
+
     void setSSAIntermediateText(const std::string &ssaCode);
+
     void setErrorLogText(const std::string &errorLog);
+
     void clearErrorLog();
 
 protected:
@@ -28,6 +35,10 @@ protected:
 
 private slots:
     void onTextChanged();
+
+    void onZoomInClicked();
+
+    void onZoomOutClicked();
 
 private:
     void buildAST(const std::string &code) const;

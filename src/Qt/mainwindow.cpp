@@ -34,15 +34,13 @@ import AssemblyGenerator;
 
 using namespace antlr4;
 
-// (ASTNodeItem implementation remains exactly the same as your previous codebase)
 class ASTNodeItem : public QGraphicsEllipseItem {
 public:
-    QGraphicsLineItem* parentLine = nullptr;
-    std::vector<QGraphicsLineItem*> childLines;
+    QGraphicsLineItem *parentLine = nullptr;
+    std::vector<QGraphicsLineItem *> childLines;
 
-    ASTNodeItem(double x, double y, double r, QGraphicsItem* parent = nullptr)
-        : QGraphicsEllipseItem(x - r, y - r, r * 2, r * 2, parent)
-    {
+    ASTNodeItem(double x, double y, double r, QGraphicsItem *parent = nullptr)
+        : QGraphicsEllipseItem(x - r, y - r, r * 2, r * 2, parent) {
         setFlags(QGraphicsItem::ItemIsMovable | QGraphicsItem::ItemSendsGeometryChanges);
     }
 
@@ -58,7 +56,7 @@ protected:
                 parentLine->setLine(line);
             }
 
-            for (QGraphicsLineItem* childLine : childLines) {
+            for (QGraphicsLineItem *childLine: childLines) {
                 QLineF line = childLine->line();
                 line.setP1(line.p1() + offset);
                 childLine->setLine(line);
@@ -69,36 +67,61 @@ protected:
 };
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow)
-{
+    : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
-    // Swap out the mock tree view inside the horizontal splitter wrapper
+    ui->zoomInButton->setFixedSize(24, 24);
+    ui->zoomOutButton->setFixedSize(24, 24);
+
+    QString semiTransparentButtonStyle =
+            "QPushButton {"
+            "    border: none;"
+            "    border-radius: 12px;"
+            "    /* 230, 242, 255 is your AST theme light blue. 0.2 alpha = 80% transparent background */"
+            "    background-color: rgba(230, 242, 255, 0.2);"
+            "    color: #276f8f;"
+            "    font-weight: bold;"
+            "    font-size: 14px;"
+            "}"
+            "QPushButton:hover {"
+            "    /* Translucent blue becomes more crisp on hover (45% opacity) */"
+            "    background-color: rgba(39, 111, 143, 0.45);"
+            "    color: #ffffff;" // Flip text color to white for contrast
+            "}"
+            "QPushButton:pressed {"
+            "    /* Solid tint on click */"
+            "    background-color: rgba(39, 111, 143, 0.8);"
+            "}";
+
+    ui->zoomInButton->setStyleSheet(semiTransparentButtonStyle);
+    ui->zoomOutButton->setStyleSheet(semiTransparentButtonStyle);
+    // Find the new inner layout container holding the tree placeholder
     QWidget *oldTree = ui->astTree;
-    QSplitter *horizontalSplitter = ui->centralwidget->findChild<QSplitter*>("columnsHorizontalSplitter");
+    QVBoxLayout *containerLayout = ui->centralwidget->findChild<QVBoxLayout *>("astContainerLayout");
 
     QGraphicsView *graphicsView = new QGraphicsView(this);
-    if (horizontalSplitter) {
-        // Find where the old tree widget was positioned inside the splitter array
-        int index = horizontalSplitter->indexOf(oldTree);
+    if (containerLayout) {
+        // Swap out the mock tree widget safely inside the layout stack
+        containerLayout->replaceWidget(oldTree, graphicsView);
         oldTree->deleteLater();
-        // Insert our clean graphics view at the exact same lane location
-        horizontalSplitter->insertWidget(index, graphicsView);
     } else {
         oldTree->deleteLater();
     }
 
-    ui->astTree = reinterpret_cast<QTreeWidget*>(graphicsView);
+    ui->astTree = reinterpret_cast<QTreeWidget *>(graphicsView);
 
-    // Configure proportional startup layout distributions
-    QSplitter *verticalSplitter = ui->centralwidget->findChild<QSplitter*>("mainVerticalSplitter");
+    // --- Wire Up Button Clicks ---
+    connect(ui->zoomInButton, &QPushButton::clicked, this, &MainWindow::onZoomInClicked);
+    connect(ui->zoomOutButton, &QPushButton::clicked, this, &MainWindow::onZoomOutClicked);
+
+    // Configure proportional startup layouts
+    QSplitter *verticalSplitter = ui->centralwidget->findChild<QSplitter *>("mainVerticalSplitter");
     if (verticalSplitter) {
-        // Allots 80% room height to workspace columns, 20% to bottom console
         verticalSplitter->setSizes(QList<int>({600, 150}));
     }
+    QSplitter *horizontalSplitter = ui->centralwidget->findChild<QSplitter *>("columnsHorizontalSplitter");
     if (horizontalSplitter) {
-        // Uniform initial column widths across all 5 modules
-        horizontalSplitter->setSizes(QList<int>({240, 240, 240, 240, 240, 240}));
+        horizontalSplitter->setSizes(QList<int>({220, 380, 200, 200, 200}));
     }
 
     astScene = new QGraphicsScene(this);
@@ -121,13 +144,25 @@ MainWindow::MainWindow(QWidget *parent)
     onTextChanged();
 }
 
+void MainWindow::onZoomInClicked() {
+    QGraphicsView *view = reinterpret_cast<QGraphicsView *>(ui->astTree);
+    if (view) {
+        view->scale(1.15, 1.15); // Matches mouse wheel step scale
+    }
+}
+
+void MainWindow::onZoomOutClicked() {
+    QGraphicsView *view = reinterpret_cast<QGraphicsView *>(ui->astTree);
+    if (view) {
+        view->scale(1.0 / 1.15, 1.0 / 1.15);
+    }
+}
+
 MainWindow::~MainWindow() {
     delete ui;
 }
 
-// (The remaining sections: onTextChanged, buildAST, and eventFilter stay completely identical to your layout)
-void MainWindow::onTextChanged()
-{
+void MainWindow::onTextChanged() {
     std::string code = ui->codeEditor->toPlainText().toStdString();
 
     if (code.empty()) {
@@ -195,8 +230,7 @@ void MainWindow::clearErrorLog() {
     ui->errorConsole->clear();
 }
 
-void MainWindow::buildAST(const std::string &code) const
-{
+void MainWindow::buildAST(const std::string &code) const {
     astScene->clear();
     if (code.empty()) return;
 
@@ -213,26 +247,26 @@ void MainWindow::buildAST(const std::string &code) const
 
     auto isValidNode = [&](tree::ParseTree *node) -> bool {
         if (!node) return false;
-        if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext*>(node)) {
+        if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext *>(node)) {
             std::string ruleName = parser.getRuleNames()[ruleContext->getRuleIndex()];
             if (ruleName == "declarationModifiers" && node->children.empty()) return false;
             return true;
         }
-        if (auto *terminalNode = dynamic_cast<tree::TerminalNode*>(node)) {
+        if (auto *terminalNode = dynamic_cast<tree::TerminalNode *>(node)) {
             std::string tokenText = terminalNode->getText();
             return (tokenText.find_first_not_of(" \t\r\n") != std::string::npos);
         }
         return false;
     };
 
-    std::function<double(tree::ParseTree*)> getSubtreeWidth;
-    std::unordered_map<tree::ParseTree*, double> cachedWidths;
+    std::function<double(tree::ParseTree *)> getSubtreeWidth;
+    std::unordered_map<tree::ParseTree *, double> cachedWidths;
 
     getSubtreeWidth = [&](tree::ParseTree *node) -> double {
         if (!isValidNode(node)) return 0.0;
         double childrenWidth = 0.0;
         size_t visibleChildren = 0;
-        for (auto *child : node->children) {
+        for (auto *child: node->children) {
             if (isValidNode(child)) {
                 childrenWidth += getSubtreeWidth(child);
                 visibleChildren++;
@@ -245,9 +279,9 @@ void MainWindow::buildAST(const std::string &code) const
     };
     getSubtreeWidth(tree);
 
-    std::function<ASTNodeItem*(tree::ParseTree*, double, double, ASTNodeItem*, double, double)> drawTree;
-    drawTree = [&](tree::ParseTree *node, double x, double y, ASTNodeItem *parentItem, double pX, double pY) -> ASTNodeItem*
-    {
+    std::function<ASTNodeItem*(tree::ParseTree *, double, double, ASTNodeItem *, double, double)> drawTree;
+    drawTree = [&](tree::ParseTree *node, double x, double y, ASTNodeItem *parentItem, double pX,
+                   double pY) -> ASTNodeItem * {
         if (!isValidNode(node)) return nullptr;
 
         ASTNodeItem *circle = new ASTNodeItem(x, y, nodeRadius);
@@ -257,12 +291,11 @@ void MainWindow::buildAST(const std::string &code) const
         QColor nodeBgColor = Qt::black;
         QColor nodeTextColor = Qt::white;
 
-        if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext*>(node)) {
+        if (auto *ruleContext = dynamic_cast<antlr4::ParserRuleContext *>(node)) {
             nodeText = QString::fromStdString(parser.getRuleNames()[ruleContext->getRuleIndex()]);
             nodeBgColor = QColor(230, 242, 255);
             nodeTextColor = QColor(39, 111, 143);
-        }
-        else if (auto *terminalNode = dynamic_cast<tree::TerminalNode*>(node)) {
+        } else if (auto *terminalNode = dynamic_cast<tree::TerminalNode *>(node)) {
             nodeText = QString::fromStdString(terminalNode->getText());
             if (nodeText == "<EOF>") {
                 nodeBgColor = QColor(255, 230, 230);
@@ -297,7 +330,7 @@ void MainWindow::buildAST(const std::string &code) const
         textItem->setPos(x - tW / 2.0, y - tH / 2.0);
 
         double currentLeftX = x - cachedWidths[node] / 2.0;
-        for (auto *child : node->children) {
+        for (auto *child: node->children) {
             if (isValidNode(child)) {
                 double childWidth = cachedWidths[child];
                 double childTargetX = currentLeftX + childWidth / 2.0;
@@ -313,14 +346,13 @@ void MainWindow::buildAST(const std::string &code) const
     }
 }
 
-bool MainWindow::eventFilter(QObject *watched, QEvent *event)
-{
-    QGraphicsView *view = reinterpret_cast<QGraphicsView*>(ui->astTree);
+bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
+    QGraphicsView *view = reinterpret_cast<QGraphicsView *>(ui->astTree);
 
     if (view && watched == view->viewport()) {
         switch (event->type()) {
             case QEvent::Wheel: {
-                QWheelEvent *wheelEvent = static_cast<QWheelEvent*>(event);
+                QWheelEvent *wheelEvent = static_cast<QWheelEvent *>(event);
                 double scaleFactor = 1.15;
                 if (wheelEvent->angleDelta().y() > 0) {
                     view->scale(scaleFactor, scaleFactor);
@@ -331,7 +363,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                 return true;
             }
             case QEvent::MouseButtonPress: {
-                QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+                QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
                 if (mouseEvent->button() == Qt::MiddleButton) {
                     isPanning = true;
                     panLastMousePos = mouseEvent->pos();
@@ -342,7 +374,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                 break;
             }
             case QEvent::MouseMove: {
-                QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+                QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
                 if (isPanning) {
                     QPoint delta = mouseEvent->pos() - panLastMousePos;
                     panLastMousePos = mouseEvent->pos();
@@ -354,7 +386,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                 break;
             }
             case QEvent::MouseButtonRelease: {
-                QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+                QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
                 if (mouseEvent->button() == Qt::MiddleButton) {
                     isPanning = false;
                     view->unsetCursor();
